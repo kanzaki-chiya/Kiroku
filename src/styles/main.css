@@ -1,0 +1,229 @@
+:root {
+  --sidebar-bg: #eef2ed;
+  --workspace: #f8faf9;
+  --surface: #ffffff;
+  --text: #25352f;
+  --text-soft: #3d4f47;
+  --muted: #64746d;
+  --border: #e1e7e2;
+  --border-strong: #cfd9d1;
+  --brand: #335d4e;
+  --brand-deep: #274a3e;
+  --accent: #bd592e;
+  --accent-soft: #f7ebe3;
+  --slate: #526b88;
+  --slate-soft: #e9eef4;
+  --sage-tint: #e4eae3;
+  --tier-s: #b8562a;
+  --tier-a: #335d4e;
+  --tier-b: #526b88;
+  --tier-c: #5f7154;
+  --tier-d: #8a6a5c;
+  --danger: #a8452c;
+  --radius-sm: 8px;
+  --radius-md: 11px;
+  --shadow-card: 0 1px 2px rgba(37, 53, 47, 0.05), 0 4px 14px rgba(37, 53, 47, 0.06);
+  --shadow-lift: 0 4px 10px rgba(37, 53, 47, 0.08), 0 12px 28px rgba(37, 53, 47, 0.12);
+  --font-body: 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-logo: Georgia, 'Times New Roman', serif;
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) var(--workspace);
+}
+
+::selection {
+  background: var(--sage-tint);
+  color: var(--brand-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text);
+  background: var(--workspace);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--text);
+}
+
+input,
+textarea {
+  caret-color: var(--brand);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::placeholder {
+  color: var(--muted);
+}
+
+.field-input,
+.field-select {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field-input:focus,
+.field-select:focus {
+  border-color: var(--brand);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(51, 93, 78, 0.14);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 15px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--brand-deep);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-soft);
+}
+
+.btn-ghost:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  background: var(--sage-tint);
+  color: var(--text-soft);
+}
+
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.tier-S { background: var(--tier-s); }
+.tier-A { background: var(--tier-a); }
+.tier-B { background: var(--tier-b); }
+.tier-C { background: var(--tier-c); }
+.tier-D { background: var(--tier-d); }
+.tier-none { background: #68766c; }
+
+.page {
+  padding: 34px 40px 56px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.breadcrumb a {
+  color: var(--muted);
+}
+
+.breadcrumb a:hover {
+  color: var(--brand);
+}
+
+.breadcrumb .sep {
+  color: #b3bdb5;
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 24px 18px 48px;
+  }
+}
