@@ -1,6 +1,12 @@
 # Kiroku · 记录
 
-> A minimalist, local-first anime rating and collection manager for desktop. Seamlessly integrated with Bangumi, crafted to keep your personal anime memories truly yours.
+> A minimalist, local-first desktop application for anime rating and collection management. Seamlessly integrated with Bangumi, crafted to keep your personal anime memories truly yours.
+
+[![Tauri 2](https://img.shields.io/badge/Tauri-2.x-24C8DB?logo=tauri&logoColor=white)](https://tauri.app/)
+[![Vue 3](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **English** · [简体中文](README.md)
 
@@ -8,43 +14,43 @@
 
 ## 📖 Overview
 
-**Kiroku** (derived from the Japanese word「記録」for *record* or *archive*) is a modern, lightweight desktop application designed for anime enthusiasts to catalog, rate, and reflect on what they watch.
+**Kiroku** (derived from the Japanese word「記録」for *record* or *archive*) is an elegant, lightweight desktop client designed for anime enthusiasts to catalog, rate, and reflect on their viewing journey.
 
-Online anime tracking platforms often lock user data into walled gardens, expose user evaluations to external ranking algorithms, or risk service shutdowns. Kiroku adopts a strict **Local-First** philosophy:
+In an era where modern media trackers lock user data behind commercial walled gardens, algorithm-driven rankings, and privacy risks, Kiroku embraces a strict **Local-First** philosophy:
 
-- **True Data Sovereignty**: All your ratings, custom reviews, dimensional scores, and tier rankings are stored locally in an embedded SQLite database. No external tracking, no cloud lock-in, no telemetry.
-- **Authoritative Metadata**: Direct integration with [Bangumi](https://bgm.tv/) open APIs to search and synchronize official titles, production studios, broadcast schedules, high-resolution covers, and community ratings.
-- **Fast & Responsive Experience**: Built with Tauri 2 and Vue 3, combining modern editorial desktop aesthetics with native performance and minimal memory footprint.
+- **True Data Sovereignty**: All ratings, dimensional evaluations, personalized reviews, and custom tier classifications are stored locally in an embedded SQLite database. No tracking, no mandatory cloud accounts, and no data lock-in.
+- **Authoritative Metadata**: Seamlessly integrates with [Bangumi](https://bgm.tv/) open APIs to search, fetch, and synchronize official Chinese and Japanese titles, production studios, broadcast dates, community ratings, and high-resolution covers.
+- **Editorial Desktop Aesthetics**: Built with Tauri 2 and Vue 3, pairing modern typography and clean editorial layouts with instantaneous startup, low memory footprint, and native performance.
 
 ---
 
 ## ✨ Key Features
 
 ### 🔍 Bangumi Search & Local Cover Caching
-- **Fast Search**: Search anime subjects by Chinese title, Japanese title, or Bangumi subject ID.
-- **Rich Subject Metadata**: Automatically fetch episodes, broadcast year, production studio, summary, tags, and community consensus score.
-- **Secure Cover Caching**: High-resolution cover artwork is fetched and cached locally via Tauri's custom asset protocol for instant loading and offline availability.
+- **Multi-Query Search**: Find anime subjects by Chinese title, Japanese original title, or Bangumi Subject ID with real-time suggestions.
+- **Comprehensive Metadata**: Automatically sync episode counts, broadcast year, animation studio, official tags, and full storyline summaries.
+- **Local Asset Protocol**: High-resolution cover artwork is fetched and securely cached on disk via Tauri's custom asset protocol, ensuring ultra-fast image loading and full offline capability.
 
-### ⭐️ 5-Dimension Rating & Personal Reviews
-- **10-Point Score Scale**: Granular scoring from 1.0 to 10.0 for your overall verdict.
-- **5 Evaluation Dimensions**: Score individual aspects independently across **Story**, **Characters**, **Animation**, **Direction**, and **Music**.
-- **Watch Status Tracking**: Organize your library into **Watching**, **Completed**, and **Planned** statuses, accompanied by detailed markdown-ready personal review notes.
+### ⭐️ Granular Scoring & Deep Evaluation
+- **10-Point Score Scale**: Granular scoring from 0.0 to 10.0 for your independent overall verdict.
+- **5-Star Dimensional Breakdown**: Score individual craft dimensions across **Story**, **Characters**, **Direction**, **Animation**, and **Music** with 0.5–5.0 star ratings (half-star steps), functioning as autonomous quality signals without rigid arithmetic constraints.
+- **Watch Status & In-Depth Reviews**: Organize your anime library into **Watching**, **Completed**, and **Planned** statuses, accompanied by rich personal notes of up to 5,000 characters.
 
-### 🏷️ Custom Tier Lists
-- **Visual Tier Ranking**: Categorize anime into custom tier rankings (e.g., Masterpiece, Recommended, Average, etc.).
-- **Total Customizability**: Customize tier names, badge colors, descriptions, and sort order.
-- **Flexible Library Filtering**: Filter and sort your library in real-time by tier, watch status, release year, score, or last updated timestamp.
+### 🏷️ Customizable Tier Lists
+- **Visual Tier Hierarchy**: Categorize titles into custom tier levels (e.g., Masterpiece, Highly Recommended, Worth Watching, Dropped).
+- **Extensive Customization**: Freely customize tier titles, color palettes, badge descriptions, and drag-and-drop priority order.
+- **Multi-Criteria Filtering**: Filter and sort your collection in real time by tier, watch status, release year, score, or last updated timestamp.
 
-### 📊 Score Insights & Taste Comparison
-- **Community Contrast**: Compare your average rating against Bangumi community consensus in real time.
-- **Score Distribution Histogram**: Visualize your rating patterns across the 1–10 score scale.
-- **Taste Discrepancy Highlights**: Discover titles where your personal taste diverges most from the community consensus—highlighting your unique hidden gems or personal disappointments.
+### 📊 Score Analytics & Community Taste Comparison
+- **Community Contrast**: Compare your average rating against the Bangumi community consensus in real time.
+- **Score Distribution Histogram**: Visualize rating patterns and distribution across the 0–10 score range.
+- **Taste Discrepancy Highlights**: Automatically surface anime where your evaluation deviates most from the public consensus, celebrating your hidden gems and distinctive personal taste.
 
-### 🔒 Privacy, Backups & Portability
-- **Standard JSON Backups**: One-click export of all personal records, cached subject metadata, and tier configurations in a portable JSON schema.
-- **Safe Import Preview**: Inspect additions, duplicates, and conflicts prior to importing, with options to skip or overwrite existing records.
-- **Database Snapshots**: Export raw timestamped SQLite database snapshot files on demand.
-- **Decoupled Cache Management**: Clear local cover caches anytime without affecting your personal ratings or review data.
+### 🔒 Data Sovereignty, Portability & Backups
+- **Standard JSON Backups**: One-click export of personal records, subject snapshots, and tier definitions into portable JSON format.
+- **Smart Import Preview**: Inspect additions, duplicates, and conflicts prior to importing, with flexible overwrite or skip policies and seamless dimension migration.
+- **Physical SQLite Snapshots**: Export raw, timestamped SQLite database files (`.db`) directly for cold storage and easy multi-device archiving.
+- **Decoupled Cache Management**: Clear local cover caches anytime to free up disk space without affecting your ratings or notes; complete data reset is also supported.
 
 ---
 
@@ -52,9 +58,9 @@ Online anime tracking platforms often lock user data into walled gardens, expose
 
 - **Frontend**: Vue 3 (Composition API with `<script setup>`), TypeScript, Vite, Pinia, Vue Router
 - **Desktop Framework**: Tauri 2 (Rust)
-- **Local Database**: SQLite (via `rusqlite` with Write-Ahead Logging / WAL mode enabled)
-- **Networking**: `reqwest` (desktop API requests and cover downloads with rustls & gzip support)
-- **UI & Icons**: Lucide Vue Next, modern CSS design tokens, and fluid responsive layouts
+- **Embedded Database**: SQLite (via `rusqlite` with Write-Ahead Logging / WAL mode enabled for robust concurrency)
+- **Networking**: Reqwest (native asynchronous requests with rustls & gzip support)
+- **UI & Icons**: Lucide Vue Next, modern CSS custom properties (tokens), and fluid responsive layout
 
 ---
 
@@ -62,25 +68,20 @@ Online anime tracking platforms often lock user data into walled gardens, expose
 
 ### Prerequisites
 
-Ensure you have the following prerequisites installed on your system:
+Ensure the following tools are installed in your development environment:
 
 1. **Node.js**: `>= 18.0.0`
 2. **Package Manager**: `npm` or `pnpm`
-3. **Rust Toolchain** (required for desktop build): `rustc` and `cargo` ([Install Rust](https://www.rust-lang.org/tools/install))
-4. **C++ Build Tools** (Windows): Visual Studio C++ Build Tools or Visual Studio with Desktop development with C++ workload
+3. **Rust Toolchain** (required for desktop compilation): `rustc` and `cargo` ([Rust Installation Guide](https://www.rust-lang.org/tools/install))
+4. **C++ Build Environment** (Windows): Visual Studio C++ Build Tools or Visual Studio with "Desktop development with C++" workload
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/kiroku.git
-   cd kiroku
-   ```
-
-2. Install frontend dependencies:
-   ```bash
-   npm install
-   ```
+```bash
+git clone https://github.com/kanzakichiya/Kiroku.git
+cd Kiroku
+npm install
+```
 
 ---
 
@@ -88,34 +89,34 @@ Ensure you have the following prerequisites installed on your system:
 
 ### 1. Web Demo Mode
 
-To quickly preview UI components and interactions in the browser (runs in in-memory state with seeded mock data; does not write to the SQLite database):
+Quickly preview UI components and layout in your browser (runs in in-memory state with seeded mock data; does not write to the SQLite database):
 
 ```bash
 npm run dev
 ```
-Open `http://localhost:5173` in your browser.
+Open `http://localhost:5173` (or the URL shown in your terminal) in your browser.
 
 ### 2. Desktop Development Mode
 
-To launch the full desktop application with Tauri and local SQLite persistence:
+Launch the full desktop application backed by Tauri and the local SQLite database:
 
 ```bash
 npm run desktop
 ```
 
-> **Windows Note**: If your terminal session does not have the MSVC build tools environment loaded, run with the bundled helper script:
+> **Windows Note**: If your terminal session does not have the MSVC build environment loaded, use the bundled wrapper script:
 > ```cmd
 > scripts\with-msvc.cmd npm run desktop
 > ```
 
 ### 3. Production Desktop Build
 
-To compile the native installer for your operating system (creates a Windows NSIS `.exe` installer):
+Compile the native desktop installer for your operating system (generates an NSIS `.exe` installer on Windows):
 
 ```bash
 npm run desktop:build
 ```
-Bundled binaries and installers will be generated in `src-tauri/target/release/bundle/`.
+The output will be generated under `src-tauri/target/release/bundle/`.
 
 ---
 
@@ -124,27 +125,27 @@ Bundled binaries and installers will be generated in `src-tauri/target/release/b
 | Command | Description |
 | :--- | :--- |
 | `npm run dev` | Start the Vite development server (in-browser mock demo) |
-| `npm run desktop` | Launch the Tauri desktop app in development mode with SQLite backend |
-| `npm run build` | Perform TypeScript type check and compile production frontend assets |
-| `npm run desktop:build` | Build the optimized desktop binary and platform installer (e.g. NSIS) |
-| `npm run typecheck` | Run `vue-tsc --noEmit` to validate TypeScript types |
-| `npm run test` | Run Vitest unit tests |
-| `npm run preview` | Preview the compiled frontend production build locally |
+| `npm run desktop` | Launch the Tauri desktop app with SQLite backend and Bangumi integration |
+| `npm run build` | Validate TypeScript types and compile frontend production assets |
+| `npm run desktop:build` | Build the optimized Rust binary and platform installer (e.g., NSIS `.exe`) |
+| `npm run typecheck` | Run `vue-tsc --noEmit` for full static type validation |
+| `npm run test` | Run the Vitest unit test suite |
+| `npm run preview` | Locally preview the compiled frontend production build |
 
 ---
 
-## 📂 Local Storage Details
+## 📂 Local Storage Paths
 
-When running as a desktop app, Kiroku stores its persistent data under the standard user application directory:
+When running as a desktop app, Kiroku stores persistent data under the standard user application directory:
 
 - **Windows**: `%APPDATA%\com.kiroku.app\`
   - `kiroku.db`: Primary SQLite database file (stores ratings, subjects, and tier definitions)
   - `kiroku.db-wal` / `kiroku.db-shm`: SQLite WAL journal and shared-memory files
-  - `covers/`: Downloaded local cover images
+  - `covers/`: Downloaded local anime cover image cache
   - `logs/kiroku.log`: Application runtime log file
 
 ---
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is open source under the [MIT License](LICENSE).
