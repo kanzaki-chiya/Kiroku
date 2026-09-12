@@ -24,6 +24,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 url = "2"
 log = "0.4"
 simplelog = "0.12"
+tauri-plugin-window-state = "2"
 
 [dev-dependencies]
 tempfile = "3"

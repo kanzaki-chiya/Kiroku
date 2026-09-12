@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { shallowRef } from 'vue'
 import TierManager from '../components/TierManager.vue'
+import { themeMode, type ThemeMode } from '../services/theme'
 import { useLibraryStore } from '../stores/library'
 import { useNotices } from '../stores/notices'
 import type { BackupDocument, ImportPreview } from '../types/anime'
 
 const store = useLibraryStore()
 const { push } = useNotices()
+
+const themeOptions: { value: ThemeMode; label: string }[] = [
+  { value: 'system', label: '跟随系统' },
+  { value: 'light', label: '浅色' },
+  { value: 'dark', label: '深色' }
+]
 const busy = shallowRef(false)
 const preview = shallowRef<ImportPreview | null>(null)
 const pendingDocument = shallowRef<BackupDocument | null>(null)
@@ -127,6 +134,24 @@ async function onDeleteData() {
       <p class="page-sub">导出导入个人收藏，管理分档，清理封面缓存。封面与收藏互不影响。</p>
     </header>
 
+    <section class="panel">
+      <h2 class="panel-title">外观</h2>
+      <p class="panel-copy">选择应用主题。跟随系统时随 Windows 明暗模式自动切换。</p>
+      <div class="segmented" role="group" aria-label="外观主题">
+        <button
+          v-for="opt in themeOptions"
+          :key="opt.value"
+          type="button"
+          class="seg-btn"
+          :class="{ 'is-active': themeMode === opt.value }"
+          :aria-pressed="themeMode === opt.value"
+          @click="themeMode = opt.value"
+        >
+          {{ opt.label }}
+        </button>
+      </div>
+    </section>
+
     <TierManager />
 
     <section class="panel">
@@ -232,6 +257,41 @@ async function onDeleteData() {
 
 .file-btn {
   cursor: pointer;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--fill);
+  border-radius: var(--radius-md);
+}
+
+.seg-btn {
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-soft);
+  border-radius: 10px;
+  transition: background var(--motion-fast) var(--ease-snap),
+    color var(--motion-fast) var(--ease-snap),
+    box-shadow var(--motion-fast) var(--ease-snap),
+    transform 100ms ease-out;
+}
+
+.seg-btn:active {
+  transform: scale(0.97);
+}
+
+.seg-btn:hover {
+  color: var(--text);
+}
+
+.seg-btn.is-active {
+  color: var(--text);
+  font-weight: 600;
+  background: var(--surface);
+  box-shadow: var(--shadow-thumb);
 }
 
 .check {

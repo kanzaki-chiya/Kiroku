@@ -64,7 +64,7 @@ function close() {
   align-items: stretch;
   height: 38px;
   flex-shrink: 0;
-  background: rgba(245, 245, 247, 0.78);
+  background: var(--titlebar-bg);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   user-select: none;

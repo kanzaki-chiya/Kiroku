@@ -2,8 +2,11 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import { router } from './router'
+import { initTheme } from './services/theme'
 import { useLibraryStore } from './stores/library'
 import './styles/main.css'
+
+initTheme()
 
 async function start() {
   const app = createApp(App)

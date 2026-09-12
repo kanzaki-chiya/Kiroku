@@ -66,7 +66,7 @@ watch(
   justify-content: center;
   gap: clamp(5px, 7cqw, 16px);
   padding: clamp(6px, 8cqw, 16px);
-  background: linear-gradient(165deg, #ececf0, #dedee4);
+  background: var(--cover-fallback);
 }
 
 .fallback-initial {
