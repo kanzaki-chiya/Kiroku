@@ -162,17 +162,17 @@ pub async fn search_subjects(
     query: String,
 ) -> Result<Vec<SubjectDto>, AppError> {
     let live = live(&state)?;
-    let results = live.bangumi.search(&query).await?;
-    if let Some(first) = results.first() {
-        let _ = remember_recent(&state, first);
-    }
-    Ok(results)
+    live.bangumi.search(&query).await
 }
 
 #[tauri::command]
 pub async fn get_subject(state: State<'_, AppState>, bangumi_subject_id: i64) -> Result<SubjectDto, AppError> {
     let live = live(&state)?;
-    live.bangumi.get_subject(bangumi_subject_id).await
+    let subject = live.bangumi.get_subject(bangumi_subject_id).await?;
+    if let Err(err) = remember_recent(&state, &subject) {
+        log::warn!("已获取资料，但最近搜索未更新：{err}");
+    }
+    Ok(subject)
 }
 
 #[tauri::command]
