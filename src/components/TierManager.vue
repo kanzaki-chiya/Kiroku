@@ -13,7 +13,7 @@ const busy = shallowRef(false)
 const rows = ref<TierDefinition[]>([])
 const draftName = shallowRef('')
 const draftDescription = shallowRef('')
-const draftColor = shallowRef('#335d4e')
+const draftColor = shallowRef('#6464a6')
 
 watch(
   () => store.tiers,
@@ -62,7 +62,7 @@ async function onCreate() {
     })
     draftName.value = ''
     draftDescription.value = ''
-    draftColor.value = '#335d4e'
+    draftColor.value = '#6464a6'
     push(store.desktop ? '已新增分档' : '已新增分档（演示模式不持久化）')
   })
 }
@@ -151,8 +151,9 @@ async function onDelete(id: number) {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 22px 24px;
-  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  margin-bottom: 20px;
 }
 
 .panel-title {
@@ -163,7 +164,7 @@ async function onDelete(id: number) {
 .panel-copy {
   margin: 0 0 16px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .tier-list {
@@ -172,28 +173,39 @@ async function onDelete(id: number) {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
-.tier-row,
-.create-row {
-  display: flex;
-  flex-wrap: wrap;
+.tier-row {
+  display: grid;
+  grid-template-columns: 28px 76px minmax(100px, 1fr) 36px auto 32px 32px 32px;
   gap: 8px;
   align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.create-row {
+  display: grid;
+  grid-template-columns: 28px 76px minmax(100px, 1fr) 36px auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 14px;
+  min-width: 0;
 }
 
 .field {
-  min-width: 72px;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--workspace);
+  background: var(--surface-soft);
 }
 
 .grow {
-  flex: 1;
-  min-width: 120px;
+  min-width: 0;
 }
 
 .color {
@@ -201,15 +213,19 @@ async function onDelete(id: number) {
   height: 32px;
   padding: 0;
   border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
   background: transparent;
 }
 
 .icon-btn {
   width: 32px;
   height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--workspace);
+  background: var(--surface-soft);
 }
 
 .icon-btn:disabled {
@@ -217,10 +233,36 @@ async function onDelete(id: number) {
 }
 
 .danger {
-  color: #bd592e;
+  color: var(--danger);
 }
 
-.create-row {
-  margin-top: 14px;
+@media (max-width: 1050px) {
+  .panel {
+    padding: 18px;
+  }
+
+  .tier-row {
+    grid-template-columns: 26px 64px minmax(72px, 1fr) 32px auto 28px 28px 28px;
+    gap: 5px;
+  }
+
+  .create-row {
+    grid-template-columns: 26px 64px minmax(72px, 1fr) 32px auto;
+    gap: 5px;
+  }
+
+  .icon-btn {
+    width: 28px;
+    height: 32px;
+  }
+
+  .color {
+    width: 32px;
+    height: 32px;
+  }
+
+  .field {
+    padding: 4px 6px;
+  }
 }
 </style>

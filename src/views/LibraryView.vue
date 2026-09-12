@@ -121,7 +121,7 @@ function resetAll() {
 <style scoped>
 .page-head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 22px;
@@ -129,35 +129,37 @@ function resetAll() {
 
 .page-title {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 32px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: .04em;
 }
 
 .page-sub {
-  margin: 6px 0 0;
-  font-size: 14px;
+  margin: 8px 0 0;
+  font-size: 12px;
   color: var(--muted);
 }
 
 .featured-panel {
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .toolbar-block {
-  margin-bottom: 22px;
+  margin-bottom: 20px;
 }
 
 .entries.layout-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 26px 20px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 22px 18px;
 }
 
 .entries.layout-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
 }
 
 .empty {
@@ -165,66 +167,59 @@ function resetAll() {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 70px 20px;
+  padding: 64px 20px;
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface);
+  text-align: center;
 }
 
 .empty-icon {
-  color: var(--muted);
+  color: var(--brand);
 }
 
 .empty-title {
   margin: 6px 0 0;
-  font-size: 16px;
-  font-weight: 600;
+  font: 600 22px var(--font-display);
 }
 
 .empty-sub {
-  margin: 0 0 10px;
-  font-size: 13.5px;
+  margin: 0 0 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
 .page-foot {
-  margin-top: 34px;
+  margin-top: 28px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--muted);
 }
 
-@media (max-width: 1440px) {
+@media (min-width: 1450px) {
   .entries.layout-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1120px) {
   .entries.layout-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px 14px;
   }
 }
 
-@media (max-width: 800px) {
+@media (max-width: 950px) {
   .entries.layout-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px 14px;
-  }
-}
-
-@media (max-width: 520px) {
-  .entries.layout-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .page-head {
-    flex-direction: column;
-    align-items: flex-start;
+  .page-title {
+    font-size: 29px;
   }
 }
 </style>

@@ -55,7 +55,7 @@ async function onPickImport(event: Event) {
   busy.value = true
   try {
     const document = JSON.parse(await file.text()) as BackupDocument
-    if (document.formatVersion !== 1 || !Array.isArray(document.entries)) {
+    if ((document.formatVersion !== 1 && document.formatVersion !== 2) || !Array.isArray(document.entries)) {
       throw new Error('备份文件格式无效')
     }
     pendingDocument.value = document
@@ -131,7 +131,7 @@ async function onDeleteData() {
 
     <section class="panel">
       <h2 class="panel-title">JSON 备份</h2>
-      <p class="panel-copy">包含个人记录、资料快照和分档设置，不含封面文件。</p>
+      <p class="panel-copy">包含个人记录、资料快照和分档设置，不含封面文件。备份不向前兼容旧版应用。</p>
       <div class="actions">
         <button type="button" class="btn btn-primary" :disabled="busy" @click="onExport">导出备份</button>
         <button type="button" class="btn btn-ghost" :disabled="busy || !store.desktop" @click="onSnapshot">
@@ -176,13 +176,16 @@ async function onDeleteData() {
 <style scoped>
 .page-title {
   margin: 0;
-  font-size: 28px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
 .page-sub {
-  margin: 6px 0 26px;
-  font-size: 14px;
+  margin: 8px 0 26px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -190,8 +193,9 @@ async function onDeleteData() {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 22px 24px;
-  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  margin-bottom: 20px;
 }
 
 .panel-title {
@@ -206,12 +210,23 @@ async function onDeleteData() {
   font-size: 14px;
 }
 
-.actions,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
 .preview {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+  width: 100%;
+  padding: 16px;
+  background: var(--surface-soft);
+  border-radius: var(--radius-sm);
+  margin-top: 12px;
 }
 
 .file-btn {
@@ -226,12 +241,13 @@ async function onDeleteData() {
 }
 
 .danger {
-  border-color: color-mix(in srgb, #bd592e 35%, var(--border));
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
 }
 
 .btn-danger {
-  background: #bd592e;
-  color: #fff;
+  background: var(--danger);
+  color: var(--on-brand);
   border: none;
 }
 
@@ -244,5 +260,11 @@ async function onDeleteData() {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+@media (max-width: 1050px) {
+  .panel {
+    padding: 18px;
+  }
 }
 </style>

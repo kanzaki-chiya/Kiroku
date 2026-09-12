@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
 import { useRoute } from 'vue-router'
-import { ArrowLeft, Ghost, Pencil, RotateCcw } from 'lucide-vue-next'
+import { ArrowLeft, Ghost, Pencil, RotateCcw, Star } from 'lucide-vue-next'
 import AnimeCover from '../components/AnimeCover.vue'
 import ScoreComparison from '../components/ScoreComparison.vue'
 import { useLibraryStore } from '../stores/library'
 import { useNotices } from '../stores/notices'
 import { dimensionKeys } from '../types/anime'
-import { dimensionLabels, formatLabels, formatScore, resolveTier, statusLabels, tierBadgeStyle, tierDescription } from '../utils/format'
+import { dimensionBand, dimensionLabels, formatLabels, formatScore, resolveTier, starFill, statusLabels, tierBadgeStyle, tierDescription } from '../utils/format'
 
 const route = useRoute()
 const store = useLibraryStore()
@@ -137,18 +137,30 @@ async function refreshMetadata() {
           <h2 class="section-title">我的分项</h2>
           <div v-for="key in dimensionKeys" :key="key" class="dim-row">
             <span class="dim-label">{{ dimensionLabels[key] }}</span>
-            <div class="rail" role="img"
+            <div
+              class="dim-stars"
+              role="img"
               :aria-label="entry.personal.dimensions[key] === null
                 ? `${dimensionLabels[key]}未评分`
-                : `${dimensionLabels[key]} ${entry.personal.dimensions[key]} 分`">
-              <div
-                v-if="entry.personal.dimensions[key] !== null"
-                class="rail-fill"
-                :style="{ width: `${(entry.personal.dimensions[key]! / 10) * 100}%` }"
-              ></div>
+                : `${dimensionLabels[key]} ${entry.personal.dimensions[key]} 星 ${dimensionBand(entry.personal.dimensions[key]!)}`"
+            >
+              <span
+                v-for="n in 5"
+                :key="n"
+                class="star-visual"
+                :data-fill="starFill(entry.personal.dimensions[key], n)"
+              >
+                <Star class="star-icon star-empty" :size="16" />
+                <span class="star-clip">
+                  <Star class="star-icon star-filled" :size="16" />
+                </span>
+              </span>
             </div>
             <span class="dim-value" :class="{ muted: entry.personal.dimensions[key] === null }">
               {{ entry.personal.dimensions[key] === null ? '未评分' : entry.personal.dimensions[key]!.toFixed(1) }}
+            </span>
+            <span v-if="entry.personal.dimensions[key] !== null" class="dim-band">
+              {{ dimensionBand(entry.personal.dimensions[key]!) }}
             </span>
           </div>
         </section>
@@ -177,18 +189,18 @@ async function refreshMetadata() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 90px 20px;
   text-align: center;
 }
 
 .missing-icon {
-  color: var(--muted);
+  color: var(--brand);
 }
 
 .missing-title {
   margin: 8px 0 0;
-  font-size: 22px;
+  font: 600 28px var(--font-display);
 }
 
 .missing-sub {
@@ -199,37 +211,48 @@ async function refreshMetadata() {
 
 .detail {
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
-  gap: 38px;
-  max-width: 980px;
+  grid-template-columns: 216px minmax(0, 1fr);
+  gap: 32px;
+  max-width: 1120px;
+  align-items: start;
 }
 
 .poster-col {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
+  min-width: 0;
+  padding-top: 4px;
 }
 
 .poster {
-  box-shadow: var(--shadow-card);
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lift);
 }
 
 .edit-btn {
   justify-content: center;
+  width: 100%;
+  font-size: 12px;
 }
 
 .fact-list {
-  margin: 4px 0 0;
+  margin: 10px 0 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  border-top: 1px solid var(--border);
 }
 
 .fact {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
-  font-size: 13.5px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
 }
 
 .fact dt {
@@ -239,130 +262,194 @@ async function refreshMetadata() {
 
 .fact dd {
   margin: 0;
+  min-width: 0;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .tier-line {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .muted {
   color: var(--muted);
 }
 
+.detail-main {
+  min-width: 0;
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
 .detail-head {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
 }
 
 .title {
   margin: 0;
-  font-size: 30px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1.45;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  overflow-wrap: anywhere;
 }
 
 .original {
-  margin: 4px 0 0;
-  font-size: 14px;
+  margin: 7px 0 0;
+  font-size: 12px;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .meta {
-  margin: 8px 0 0;
-  font-size: 13.5px;
+  margin: 10px 0 0;
+  font-size: 12px;
   color: var(--text-soft);
+  overflow-wrap: anywhere;
 }
 
 .tags {
   display: flex;
-  gap: 7px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .synopsis {
-  margin: 0 0 18px;
-  font-size: 14.5px;
-  line-height: 1.85;
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.95;
   color: var(--text-soft);
-  max-width: 640px;
+  overflow-wrap: anywhere;
 }
 
 .community-line {
-  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 5px;
+  font-size: 11px;
   color: var(--muted);
-  margin-bottom: 20px;
+  margin-bottom: 22px;
+  overflow-wrap: anywhere;
 }
 
 .compare-block {
-  padding: 18px 22px;
+  padding: 20px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  margin-bottom: 26px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  margin-bottom: 24px;
 }
 
 .section-title {
   margin: 0 0 12px;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.section-title::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  background: var(--brand);
+  border-radius: var(--radius-xs);
 }
 
 .dims {
-  margin-bottom: 26px;
-  max-width: 560px;
+  margin-bottom: 24px;
 }
 
 .dim-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 42px minmax(90px, 1fr) 40px 40px;
   align-items: center;
-  gap: 14px;
-  padding: 5px 0;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .dim-label {
-  width: 40px;
-  font-size: 13.5px;
+  font-size: 12px;
   color: var(--text-soft);
+}
+
+.dim-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.star-visual {
+  position: relative;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 
-.rail {
-  flex: 1;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--sage-tint);
+.star-icon {
+  display: block;
+}
+
+.star-empty {
+  color: var(--border-strong);
+}
+
+.star-filled {
+  color: var(--brand);
+  fill: var(--brand);
+}
+
+.star-clip {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
   overflow: hidden;
 }
 
-.rail-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--accent);
+.star-visual[data-fill='half'] .star-clip {
+  width: 50%;
+}
+
+.star-visual[data-fill='full'] .star-clip {
+  width: 100%;
 }
 
 .dim-value {
-  width: 44px;
   text-align: right;
-  font-size: 13.5px;
-  font-weight: 600;
-  flex-shrink: 0;
+  font: 600 13px var(--font-number);
 }
 
 .dim-value.muted {
-  font-weight: 400;
-  color: var(--muted);
+  font: 11px var(--font-body);
 }
 
-.review-block {
-  max-width: 640px;
+.dim-band {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
 }
 
 .review-text {
   margin: 0;
-  font-size: 14.5px;
-  line-height: 1.9;
+  padding: 15px 18px;
+  border-left: 2px solid var(--brand);
+  background: var(--surface-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 13px;
+  line-height: 1.95;
   color: var(--text-soft);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -370,18 +457,60 @@ async function refreshMetadata() {
 
 .review-empty {
   margin: 0;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--muted);
 }
 
-@media (max-width: 800px) {
+@media (max-width: 1050px) {
   .detail {
-    grid-template-columns: 1fr;
-    gap: 26px;
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 20px;
   }
 
-  .poster-col {
-    max-width: 200px;
+  .detail-main {
+    padding: 20px;
+  }
+
+  .title {
+    font-size: 27px;
+  }
+
+  .fact {
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .fact dd {
+    text-align: left;
+  }
+
+  .compare-block {
+    padding: 14px;
+  }
+
+  .dim-row {
+    grid-template-columns: 30px minmax(84px, 1fr) 36px 32px;
+    gap: 6px;
+  }
+
+  .dim-stars {
+    gap: 2px;
+  }
+}
+
+@media (max-width: 900px) {
+  .detail {
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .detail-main {
+    padding: 18px;
+  }
+
+  .edit-btn {
+    padding: 0 6px;
+    font-size: 11px;
   }
 }
 </style>

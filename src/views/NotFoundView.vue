@@ -23,16 +23,27 @@ import { Compass } from 'lucide-vue-next'
 }
 
 .icon {
-  color: var(--muted);
+  color: var(--brand);
+  width: 48px;
+  height: 48px;
+  padding: 14px;
+  background: var(--brand-soft);
+  border-radius: var(--radius-lg);
+  box-sizing: content-box;
 }
 
 .title {
-  margin: 10px 0 0;
-  font-size: 26px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
 .sub {
   margin: 0 0 18px;
+  font-size: 13px;
   color: var(--muted);
 }
 </style>

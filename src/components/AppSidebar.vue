@@ -25,13 +25,10 @@ const tierCounts = computed(() => {
 <template>
   <aside class="sidebar">
     <RouterLink to="/library" class="brand">
-      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true">
-        <rect x="9.5" y="3" width="15" height="19" rx="2.4" fill="#335d4e" opacity="0.32" />
-        <rect x="6" y="5.5" width="15" height="19" rx="2.4" fill="#335d4e" opacity="0.62" />
-        <rect x="2.5" y="8" width="15" height="17" rx="2.4" fill="#335d4e" />
-        <line x1="6.5" y1="13.5" x2="13.5" y2="13.5" stroke="#eef2ed" stroke-width="1.4" stroke-linecap="round" />
-        <line x1="6.5" y1="17" x2="11.5" y2="17" stroke="#eef2ed" stroke-width="1.4" stroke-linecap="round" />
-        <circle cx="19.6" cy="6.4" r="2.1" fill="#bd592e" />
+      <svg class="brand-mark" viewBox="0 0 30 36" fill="none" aria-hidden="true">
+        <path d="M7 5h17v25H7z" stroke="currentColor" stroke-width="1.2" />
+        <path d="M3 9v25h17M11 5v25M15 11h5M15 15h5" stroke="currentColor" stroke-width="1.2" />
+        <path d="M19 3v6l2-1.4L23 9V3z" fill="currentColor" />
       </svg>
       <span class="brand-text">
         <span class="brand-name">Kiroku</span>
@@ -89,25 +86,28 @@ const tierCounts = computed(() => {
 
 <style scoped>
 .sidebar {
-  width: 216px;
+  width: 208px;
   flex-shrink: 0;
   background: var(--sidebar-bg);
-  border-right: 1px solid var(--border);
-  padding: 22px 14px 18px;
+  border-right: 1px solid var(--sidebar-line);
+  padding: 30px 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 32px;
   position: sticky;
   top: 0;
   height: 100vh;
   overflow-y: auto;
+  color: var(--sidebar-text);
+  scrollbar-color: var(--sidebar-line) transparent;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 6px;
+  gap: 12px;
+  padding: 0 10px;
+  color: var(--sidebar-text);
   text-decoration: none;
 }
 
@@ -117,7 +117,7 @@ const tierCounts = computed(() => {
 
 .brand-mark {
   width: 30px;
-  height: 30px;
+  height: 36px;
   flex-shrink: 0;
 }
 
@@ -129,54 +129,64 @@ const tierCounts = computed(() => {
 
 .brand-name {
   font-family: var(--font-logo);
-  font-style: italic;
-  font-size: 21px;
-  color: var(--brand-deep);
+  font-size: 27px;
   letter-spacing: 0.01em;
+  color: var(--sidebar-text);
 }
 
 .brand-sub {
   font-size: 11px;
-  color: var(--muted);
-  margin-top: 2px;
+  letter-spacing: .08em;
+  color: var(--sidebar-muted);
+  margin-top: 7px;
 }
 
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 6px;
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
+  gap: 10px;
+  min-height: 42px;
+  padding: 9px 12px;
   border-radius: var(--radius-sm);
-  color: var(--text-soft);
-  font-size: 14px;
+  color: var(--sidebar-muted);
+  font-size: 13px;
   text-decoration: none;
+  transition: background var(--motion-fast), color var(--motion-fast);
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--sidebar-raised);
+  color: var(--sidebar-text);
   text-decoration: none;
 }
 
 .nav-item.is-active {
-  background: var(--surface);
-  color: var(--brand-deep);
+  background: var(--sidebar-raised);
+  color: var(--sidebar-text);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(37, 53, 47, 0.06);
+}
+
+.nav-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 13px;
+  bottom: 13px;
+  width: 2px;
+  border-radius: var(--radius-xs);
+  background: var(--sidebar-muted);
 }
 
 .nav-icon {
-  color: var(--muted);
+  color: currentColor;
   flex-shrink: 0;
-}
-
-.nav-item.is-active .nav-icon {
-  color: var(--brand);
 }
 
 .nav-label {
@@ -184,79 +194,81 @@ const tierCounts = computed(() => {
 }
 
 .nav-count {
-  font-size: 12px;
-  color: var(--muted);
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 999px;
-  padding: 1px 8px;
-}
-
-.nav-item.is-active .nav-count {
-  color: var(--brand);
-  background: var(--sidebar-bg);
+  font-family: var(--font-number);
+  font-size: 11px;
+  color: var(--sidebar-text);
+  padding-left: 3px;
 }
 
 .tier-section {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 5px;
+  padding-top: 24px;
+  border-top: 1px solid var(--sidebar-line);
 }
 
 .section-title {
-  font-size: 12px;
-  color: var(--muted);
-  letter-spacing: 0.06em;
-  margin: 0 10px 6px;
+  font-size: 10px;
+  color: var(--sidebar-muted);
+  letter-spacing: .12em;
+  margin: 0 12px 10px;
 }
 
 .tier-item {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 6px 10px;
+  gap: 10px;
+  padding: 7px 12px;
   border-radius: var(--radius-sm);
   text-decoration: none;
-  color: var(--text-soft);
-  font-size: 13.5px;
+  color: var(--sidebar-muted);
+  font-size: 12px;
+  transition: background var(--motion-fast), color var(--motion-fast);
 }
 
-.tier-item:hover {
-  background: rgba(255, 255, 255, 0.65);
+.tier-item .tier-badge {
+  min-width: 23px;
+  min-height: 23px;
+  font-size: 11px;
+  max-width: 62px;
+}
+
+.tier-item:hover, .tier-item.is-current {
+  background: var(--sidebar-raised);
+  color: var(--sidebar-text);
   text-decoration: none;
-}
-
-.tier-item.is-current {
-  background: var(--surface);
-  box-shadow: 0 1px 2px rgba(37, 53, 47, 0.06);
 }
 
 .tier-desc {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .tier-count {
-  font-size: 12px;
-  color: var(--muted);
+  font: 11px var(--font-number);
+  color: var(--sidebar-muted);
 }
 
 .me {
   margin-top: auto;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 8px 0;
-  border-top: 1px solid var(--border);
+  gap: 11px;
+  padding: 18px 8px 0;
+  border-top: 1px solid var(--sidebar-line);
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--brand);
-  color: #fff;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--sidebar-line);
+  border-radius: var(--radius-sm);
+  background: var(--sidebar-raised);
+  color: var(--sidebar-text);
   font-family: var(--font-logo);
-  font-style: italic;
-  font-size: 16px;
+  font-size: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -266,57 +278,65 @@ const tierCounts = computed(() => {
 .me-text {
   display: flex;
   flex-direction: column;
+  gap: 4px;
   line-height: 1.3;
 }
 
 .me-name {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--sidebar-text);
 }
 
 .me-sub {
-  font-size: 11.5px;
-  color: var(--muted);
+  font-size: 10px;
+  color: var(--sidebar-muted);
 }
 
-@media (min-width: 701px) and (max-width: 1000px) {
-  .sidebar {
-    width: 188px;
-  }
+.sidebar :focus-visible {
+  outline-color: var(--sidebar-text);
 }
 
-@media (max-width: 700px) {
+@media (max-width: 1050px) {
   .sidebar {
-    width: 100%;
-    height: auto;
-    position: static;
-    overflow: visible;
-    padding: 14px 18px;
-    gap: 14px;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
+    width: 184px;
+    padding: 24px 12px 16px;
+    gap: 26px;
   }
 
-  .brand-sub,
-  .me,
-  .tier-section {
-    display: none;
+  .brand {
+    padding: 0 7px;
+    gap: 9px;
   }
 
-  .nav {
-    flex-direction: row;
-    gap: 8px;
+  .brand-name {
+    font-size: 25px;
   }
 
   .nav-item {
-    min-height: 40px;
-    flex: 1;
+    padding: 9px 10px;
+    gap: 8px;
   }
 
-  .brand-mark {
-    width: 26px;
-    height: 26px;
+  .tier-item {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+}
+
+@media (max-height: 680px) {
+  .sidebar {
+    gap: 20px;
+    padding-top: 22px;
+  }
+
+  .tier-section {
+    padding-top: 16px;
+    gap: 1px;
+  }
+
+  .me {
+    padding-top: 12px;
   }
 }
 </style>

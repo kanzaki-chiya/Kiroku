@@ -26,21 +26,39 @@ const library = useLibraryStore()
 <style scoped>
 .notices {
   position: fixed;
-  right: 26px;
+  right: 24px;
   bottom: 24px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   z-index: 60;
+  max-width: min(440px, calc(100vw - 48px));
+  pointer-events: none;
 }
 
 .notice {
-  background: var(--text);
-  color: #f2f6f3;
-  font-size: 14px;
-  padding: 11px 18px;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  font-size: 13px;
+  padding: 14px 20px;
+  border: 1px solid var(--sidebar-line);
+  border-left: 3px solid var(--sidebar-muted);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lift);
+  overflow-wrap: anywhere;
+  animation: notice-in 180ms ease-out;
+}
+
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .boot-fail {
@@ -49,21 +67,37 @@ const library = useLibraryStore()
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 14px;
   padding: 40px;
   text-align: center;
+  background: var(--workspace);
+}
+
+.boot-fail::before {
+  content: '';
+  width: 34px;
+  height: 42px;
+  border: 2px solid var(--brand);
+  border-radius: var(--radius-xs);
+  box-shadow: 6px -6px 0 var(--brand-soft);
+  margin-bottom: 18px;
 }
 
 .boot-title {
   margin: 0;
-  font-size: 28px;
+  font: 600 30px/1.5 var(--font-display);
 }
 
-.boot-message,
-.boot-hint {
+.boot-message, .boot-hint {
   margin: 0;
   max-width: 36rem;
   color: var(--muted);
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.boot-message {
+  color: var(--danger);
 }
 </style>

@@ -180,21 +180,20 @@ function toggleDirection() {
 
 .tabs {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 7px;
   border-bottom: 1px solid var(--border);
-  overflow-x: auto;
 }
 
 .tab {
+  position: relative;
   flex-shrink: 0;
-  padding: 8px 14px;
-  font-size: 14px;
+  padding: 0 12px 11px;
+  font-size: 12px;
   color: var(--muted);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .tab:hover {
@@ -204,62 +203,83 @@ function toggleDirection() {
 .tab.is-active {
   color: var(--brand-deep);
   font-weight: 600;
-  border-bottom-color: var(--brand);
+}
+
+.tab.is-active::after {
+  content: '';
+  position: absolute;
+  height: 2px;
+  background: var(--brand);
+  bottom: -1px;
+  left: 12px;
+  right: 12px;
 }
 
 .tab-count {
-  font-size: 11.5px;
+  font: 10px var(--font-number);
   color: var(--muted);
   background: var(--sage-tint);
-  border-radius: 999px;
-  padding: 0 7px;
+  border-radius: var(--radius-xs);
+  padding: 2px 5px;
 }
 
 .tab.is-active .tab-count {
-  color: var(--brand);
+  color: var(--brand-deep);
+  background: var(--brand-soft);
 }
 
 .controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .search-box {
   position: relative;
   flex: 1;
-  min-width: 220px;
-  max-width: none;
+  min-width: 170px;
   display: flex;
   align-items: center;
 }
 
 .search-icon {
   position: absolute;
-  left: 11px;
+  left: 12px;
   color: var(--muted);
   pointer-events: none;
 }
 
 .search-input {
   width: 100%;
-  height: 36px;
-  padding: 0 12px 0 33px;
-  border: 1px solid var(--border-strong);
+  height: 38px;
+  padding: 0 12px 0 35px;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
+  font-size: 12px;
 }
 
 .search-input:focus {
   border-color: var(--brand);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(51, 93, 78, 0.14);
+  box-shadow: var(--focus-ring);
+}
+
+.filter-toggle {
+  font-size: 12px;
 }
 
 .filter-toggle.is-on {
   border-color: var(--brand);
-  color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+}
+
+.sort-field .field-select {
+  font-size: 12px;
+  border-color: var(--border);
+  width: 132px;
 }
 
 .icon-btn {
@@ -270,27 +290,30 @@ function toggleDirection() {
 
 .layout-switch {
   display: flex;
-  border: 1px solid var(--border-strong);
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  overflow: hidden;
   background: var(--surface);
 }
 
 .layout-btn {
-  width: 36px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--muted);
 }
 
-.layout-btn + .layout-btn {
-  border-left: 1px solid var(--border);
+.layout-btn:hover {
+  color: var(--brand-deep);
+  background: var(--surface-soft);
 }
 
 .layout-btn.is-active {
-  background: var(--sage-tint);
+  background: var(--brand-soft);
   color: var(--brand-deep);
 }
 
@@ -298,10 +321,10 @@ function toggleDirection() {
   display: flex;
   align-items: flex-end;
   gap: 16px;
-  padding: 14px 16px;
+  padding: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   flex-wrap: wrap;
 }
 
@@ -314,43 +337,16 @@ function toggleDirection() {
 
 .filter-field .field-select {
   max-width: 100%;
+  font-size: 12px;
 }
 
 .filter-label {
-  font-size: 12.5px;
+  font-size: 11px;
   color: var(--muted);
 }
 
 .clear-btn {
   margin-left: auto;
-}
-
-@media (max-width: 520px) {
-  .tab {
-    padding: 8px 9px;
-    font-size: 13px;
-  }
-
-  .controls {
-    gap: 8px;
-  }
-
-  .search-box {
-    flex-basis: 100%;
-    min-width: 0;
-  }
-
-  .filter-row {
-    padding: 12px;
-    gap: 12px;
-  }
-
-  .clear-btn {
-    margin-left: 0;
-  }
-
-  .filter-field {
-    flex: 1 1 120px;
-  }
+  font-size: 12px;
 }
 </style>

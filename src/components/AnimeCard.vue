@@ -38,7 +38,7 @@ const tierStyle = computed(() =>
         <span class="rating mine" :title="`我的评分 ${formatScore(entry.personal.score)}`">
           <Star :size="12" class="star" aria-hidden="true" />
           <span class="rating-label">我的</span>
-          {{ formatScore(entry.personal.score) }}
+          <span class="personal-number">{{ formatScore(entry.personal.score) }}</span>
         </span>
         <span class="rating bgm" :title="`Bangumi 社区评分（Mock）${formatScore(entry.subject.community.score)}`">
           <span class="rating-label">社区</span>
@@ -52,98 +52,115 @@ const tierStyle = computed(() =>
 <style scoped>
 .card {
   display: flex;
+  min-width: 0;
   text-decoration: none;
   color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast), border-color var(--motion-fast);
 }
 
 .card:hover {
   text-decoration: none;
+  transform: translateY(-3px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-lift);
 }
 
 .cover-wrap {
   position: relative;
+  min-width: 0;
   flex-shrink: 0;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
 }
 
-.card:hover .cover-wrap,
-.card:focus-visible .cover-wrap {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lift);
-}
-
-.card:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 3px;
+.cover-wrap :deep(.cover) {
+  border-radius: var(--radius-sm);
 }
 
 .card-tier {
   position: absolute;
-  top: 7px;
-  left: 7px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  top: 10px;
+  left: -5px;
+  min-width: 30px;
+  min-height: 29px;
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  box-shadow: var(--shadow-card);
+  max-width: calc(100% - 10px);
 }
 
 .status-chip {
   position: absolute;
-  bottom: 7px;
-  right: 7px;
-  font-size: 11px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: rgba(37, 53, 47, 0.72);
-  color: #eef3ef;
-  backdrop-filter: blur(2px);
+  bottom: 8px;
+  right: 8px;
+  padding: 3px 8px;
+  font-size: 10px;
+  border-radius: var(--radius-xs);
+  background: var(--cover-overlay);
+  color: var(--on-brand);
 }
 
 .card-title {
   margin: 0;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
-  line-height: 1.4;
+  line-height: 1.6;
+  white-space: nowrap;
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
 }
 
 .card-meta {
-  margin: 2px 0 0;
-  font-size: 12.5px;
+  margin: 3px 0 0;
+  font-size: 11px;
   color: var(--muted);
 }
 
 .ratings {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 6px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
 }
 
 .rating {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 4px;
+  font-family: var(--font-number);
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .rating-label {
-  font-size: 11.5px;
-  font-weight: 500;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 400;
   color: var(--muted);
 }
 
 .rating.mine {
-  color: var(--accent);
+  color: var(--text-soft);
 }
 
 .rating.mine .star {
-  fill: var(--accent);
+  align-self: center;
+  width: 11px;
+  color: var(--brand-deep);
+  fill: var(--brand-deep);
+}
+
+.personal-number {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--score-gold);
 }
 
 .rating.bgm {
@@ -152,6 +169,7 @@ const tierStyle = computed(() =>
 
 .is-grid {
   flex-direction: column;
+  padding: 6px;
 }
 
 .is-grid .cover-wrap {
@@ -159,42 +177,44 @@ const tierStyle = computed(() =>
 }
 
 .is-grid .card-body {
-  padding: 9px 2px 0;
+  min-width: 0;
+  padding: 10px 6px 7px;
 }
 
 .is-list {
   flex-direction: row;
   align-items: center;
-  gap: 16px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: var(--radius-md);
-}
-
-.is-list:hover {
-  border-color: var(--border-strong);
+  gap: 18px;
+  padding: 10px;
 }
 
 .is-list .cover-wrap {
-  width: 64px;
+  width: 58px;
 }
 
-.is-list .cover-wrap :deep(.cover) {
-  border-radius: var(--radius-sm);
+.is-list .card-tier {
+  top: 4px;
+  min-width: 22px;
+  min-height: 22px;
+  padding: 2px 5px;
+  font-size: 10px;
+}
+
+.is-list .status-chip {
+  bottom: 3px;
+  right: 3px;
+  padding: 2px 4px;
+  font-size: 9px;
 }
 
 .is-list .card-body {
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto 155px;
   align-items: center;
-  gap: 18px;
-}
-
-.is-list .card-title {
-  font-size: 15px;
+  gap: 24px;
+  padding-right: 10px;
 }
 
 .is-list .card-meta {
@@ -203,21 +223,26 @@ const tierStyle = computed(() =>
 
 .is-list .ratings {
   margin: 0;
+  padding: 0 0 0 20px;
+  border-top: none;
+  border-left: 1px solid var(--border);
 }
 
-@media (max-width: 700px) {
+@media (max-width: 1050px) {
   .is-list .card-body {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 3px;
+    grid-template-columns: minmax(0, 1fr) 145px;
+    gap: 4px 16px;
   }
 
-  .ratings {
-    gap: 8px;
-    flex-wrap: wrap;
+  .is-list .card-meta {
+    grid-column: 1;
+    grid-row: 2;
   }
 
-  .rating {
-    white-space: nowrap;
+  .is-list .ratings {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    padding-left: 12px;
   }
 }
 </style>

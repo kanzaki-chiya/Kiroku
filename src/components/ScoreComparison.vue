@@ -41,47 +41,47 @@ const deltaText = computed(() => {
 .compare {
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 22px;
   flex-wrap: wrap;
 }
 
 .score {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 9px;
+  min-width: 0;
 }
 
 .score-label {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 5px;
-  font-size: 12.5px;
+  font-size: 11px;
   color: var(--muted);
 }
 
 .score-label .star {
-  color: var(--accent);
-  fill: var(--accent);
+  color: var(--brand-deep);
+  fill: var(--brand-deep);
 }
 
 .mock {
-  font-size: 10.5px;
-  padding: 0 6px;
-  margin-left: 4px;
-  border-radius: 999px;
+  font-size: 9px;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
   background: var(--slate-soft);
   color: var(--slate);
 }
 
 .score-value {
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
+  font: 700 38px/1 var(--font-number);
+  letter-spacing: -0.05em;
 }
 
 .mine .score-value {
-  color: var(--accent);
+  color: var(--score-gold);
 }
 
 .community .score-value {
@@ -89,22 +89,36 @@ const deltaText = computed(() => {
 }
 
 .delta {
-  margin: 0;
-  font-size: 13px;
+  margin: 0 0 0 auto;
+  font-size: 11px;
   font-weight: 600;
-  padding: 4px 12px;
-  border-radius: 999px;
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
   background: var(--sage-tint);
   color: var(--text-soft);
 }
 
 .delta.positive {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--brand-soft);
+  color: var(--brand-deep);
 }
 
 .delta.negative {
   background: var(--slate-soft);
   color: var(--slate);
+}
+
+@media (max-width: 1050px) {
+  .compare {
+    gap: 16px;
+  }
+
+  .delta {
+    margin-left: 0;
+  }
+
+  .score-value {
+    font-size: 32px;
+  }
 }
 </style>

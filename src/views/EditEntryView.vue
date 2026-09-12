@@ -85,18 +85,21 @@ function onCancel() {
 <style scoped>
 .page-title {
   margin: 0;
-  font-size: 28px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
 .page-sub {
-  margin: 6px 0 26px;
-  font-size: 14px;
+  margin: 8px 0 26px;
+  font-size: 13px;
   color: var(--muted);
 }
 
 .form-wrap {
-  max-width: 640px;
+  max-width: 800px;
 }
 
 .missing {
@@ -116,6 +119,6 @@ function onCancel() {
 .missing-sub {
   margin: 0 0 16px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 </style>

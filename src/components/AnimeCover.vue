@@ -43,9 +43,10 @@ watch(
   position: relative;
   width: 100%;
   aspect-ratio: 2 / 3;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--sage-tint);
+  container-type: inline-size;
 }
 
 .cover-img {
@@ -53,6 +54,7 @@ watch(
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: inherit;
 }
 
 .cover-fallback {
@@ -62,30 +64,46 @@ watch(
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 14px;
-  background:
-    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.5), transparent 55%),
-    linear-gradient(160deg, #dfe7df 0%, #c9d6cc 55%, #b4c4bb 100%);
+  gap: clamp(5px, 7cqw, 20px);
+  padding: clamp(6px, 8cqw, 16px);
+  background: var(--slate-soft);
+}
+
+.cover-fallback::before {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xs);
+  pointer-events: none;
+}
+
+.cover-fallback::after {
+  content: '';
+  position: absolute;
+  inset: 16px auto 16px 16px;
+  width: 3px;
+  border-left: 1px solid var(--border-strong);
+  border-right: 1px solid var(--border-strong);
 }
 
 .fallback-initial {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.75);
   color: var(--brand-deep);
-  font-family: var(--font-logo);
-  font-size: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  font-family: var(--font-display);
+  font-size: clamp(20px, 25cqw, 48px);
+  line-height: 1;
 }
 
 .fallback-title {
-  font-size: 12.5px;
+  font-size: clamp(9px, 7cqw, 11px);
   color: var(--text-soft);
   text-align: center;
-  line-height: 1.4;
+  line-height: 1.7;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>

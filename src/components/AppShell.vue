@@ -34,28 +34,17 @@ const desktop = isTauri()
 }
 
 .demo-banner {
-  font-size: 12.5px;
+  font-size: 11px;
   color: var(--muted);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 7px 40px;
-  text-align: center;
-  letter-spacing: 0.01em;
+  padding: 7px var(--page-gutter);
+  text-align: right;
+  line-height: 1.7;
 }
 
 .outlet {
   flex: 1;
   min-width: 0;
-}
-
-@media (max-width: 700px) {
-  .shell {
-    flex-direction: column;
-  }
-
-  .demo-banner {
-    padding: 8px 18px;
-    text-align: left;
-  }
 }
 </style>
