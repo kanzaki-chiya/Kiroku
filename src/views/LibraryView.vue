@@ -77,7 +77,7 @@ function resetAll() {
     <header class="page-head">
       <div>
         <h1 class="page-title">我的番剧库</h1>
-        <p class="page-sub">共收录 {{ store.count }} 部 · 每一部，都有自己的回响。</p>
+        <p class="page-sub">共收录 {{ store.count }} 部</p>
       </div>
       <RouterLink to="/add" class="btn btn-primary">
         <Plus :size="15" aria-hidden="true" />收录番剧
