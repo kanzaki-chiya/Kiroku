@@ -9,3 +9,4 @@ src-tauri/gen
 AGENTS.md
 BACKEND_PLAN.md
 STAR_RATING_SPEC.md
+.secrets/

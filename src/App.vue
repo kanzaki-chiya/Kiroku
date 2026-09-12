@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppShell from './components/AppShell.vue'
+import UpdateBanner from './components/UpdateBanner.vue'
 import { useLibraryStore } from './stores/library'
 import { useNotices } from './stores/notices'
 
@@ -17,6 +18,7 @@ const library = useLibraryStore()
     <AppShell>
       <RouterView />
     </AppShell>
+    <UpdateBanner />
     <div class="notices" role="status" aria-live="polite">
       <div v-for="notice in notices" :key="notice.id" class="notice">{{ notice.text }}</div>
     </div>

@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import { router } from './router'
 import { initTheme } from './services/theme'
+import { checkForUpdates } from './services/updater'
 import { useLibraryStore } from './stores/library'
 import './styles/main.css'
 
@@ -21,6 +22,7 @@ async function start() {
     // bootError is rendered by App.vue
   }
   app.mount('#app')
+  void checkForUpdates()
 }
 
 void start()
