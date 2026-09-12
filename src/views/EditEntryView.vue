@@ -58,7 +58,6 @@ function onCancel() {
     <template v-if="entry && initial">
       <header class="page-head">
         <h1 class="page-title">编辑「{{ entry.subject.nameCn }}」</h1>
-        <p class="page-sub">修改只影响我的记录，作品信息保持不变。</p>
       </header>
       <div class="form-wrap">
         <RatingForm
@@ -90,12 +89,6 @@ function onCancel() {
   line-height: 1.4;
   font-weight: 600;
   letter-spacing: 0.03em;
-}
-
-.page-sub {
-  margin: 8px 0 26px;
-  font-size: 13px;
-  color: var(--muted);
 }
 
 .form-wrap {

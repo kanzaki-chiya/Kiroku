@@ -213,13 +213,11 @@ function onCancel() {
         class="review-area"
         rows="4"
         maxlength="5000"
-        placeholder="这部作品留给你的，是一句话、一个场景，还是一段心情？"
+        placeholder="写点短评……"
       ></textarea>
     </label>
 
     <p v-if="error" class="form-error" role="alert">{{ error }}</p>
-
-    <p class="form-note">总分独立填写；分项与 Bangumi 评分不参与总分计算。</p>
 
     <div class="form-actions">
       <button type="button" class="btn btn-ghost" @click="onCancel">取消</button>
@@ -373,11 +371,6 @@ function onCancel() {
   padding-top: 18px;
 }
 
-.form-note {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted);
-}
 
 @media (max-width: 1050px) {
   .rating-form {

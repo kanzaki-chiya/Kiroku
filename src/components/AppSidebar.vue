@@ -2,10 +2,12 @@
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { BarChart3, Library, Settings } from 'lucide-vue-next'
+import { isTauri } from '../runtime'
 import { useLibraryStore } from '../stores/library'
 import { useLibraryViewStore } from '../stores/libraryView'
 import { tierBadgeStyle, tierDescription } from '../utils/format'
 
+const desktop = isTauri()
 const store = useLibraryStore()
 const viewState = useLibraryViewStore()
 const route = useRoute()
@@ -32,7 +34,6 @@ const tierCounts = computed(() => {
       </svg>
       <span class="brand-text">
         <span class="brand-name">Kiroku</span>
-        <span class="brand-sub">私人番剧记录</span>
       </span>
     </RouterLink>
 
@@ -74,11 +75,11 @@ const tierCounts = computed(() => {
       </RouterLink>
     </div>
 
-    <div class="me">
+    <div v-if="!desktop" class="me">
       <span class="avatar" aria-hidden="true">K</span>
       <span class="me-text">
-        <span class="me-name">我的观影空间</span>
-        <span class="me-sub">Demo · 本地示例</span>
+        <span class="me-name">本地演示</span>
+        <span class="me-sub">Demo 数据 · 不持久化</span>
       </span>
     </div>
   </aside>
@@ -132,13 +133,6 @@ const tierCounts = computed(() => {
   font-size: 27px;
   letter-spacing: 0.01em;
   color: var(--sidebar-text);
-}
-
-.brand-sub {
-  font-size: 11px;
-  letter-spacing: .08em;
-  color: var(--sidebar-muted);
-  margin-top: 7px;
 }
 
 .nav {

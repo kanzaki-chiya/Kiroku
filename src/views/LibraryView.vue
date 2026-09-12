@@ -113,7 +113,6 @@ function resetAll() {
 
     <footer class="page-foot">
       <span>显示 {{ filtered.length }} / {{ store.count }} 部</span>
-      <span class="foot-note">所有评分，只代表我自己。</span>
     </footer>
   </div>
 </template>

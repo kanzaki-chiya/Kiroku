@@ -17,6 +17,7 @@ const emit = defineEmits<{
 
 const store = useLibraryStore()
 const desktop = isTauri()
+const entryInitial = { ...emptyDraft(), score: 7 }
 
 const query = ref('')
 const results = ref<BangumiSubject[]>([])
@@ -272,7 +273,7 @@ onBeforeUnmount(() => {
         </div>
         <p v-if="addError" class="add-error" role="alert">{{ addError }}</p>
         <RatingForm
-          :initial="emptyDraft()"
+          :initial="entryInitial"
           :tiers="store.tiers"
           :busy="store.saving"
           submit-label="收录到我的番剧库"
