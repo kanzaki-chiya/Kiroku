@@ -16,6 +16,21 @@ pub fn score_to_tenths(value: f64, label: &str) -> Result<i64, AppError> {
     Ok((value * 10.0).round() as i64)
 }
 
+pub fn dimension_to_tenths(value: f64) -> Result<i64, AppError> {
+    if !value.is_finite() || !(0.5..=5.0).contains(&value) {
+        return Err(AppError::validation(
+            "维度评分必须是 0.5–5 之间的半星步进",
+        ));
+    }
+    let tenths = (value * 10.0).round() as i64;
+    if tenths % 5 != 0 {
+        return Err(AppError::validation(
+            "维度评分必须是 0.5–5 之间的半星步进",
+        ));
+    }
+    Ok(tenths)
+}
+
 pub fn tenths_to_score(value: i64) -> f64 {
     value as f64 / 10.0
 }
@@ -32,17 +47,9 @@ pub fn validate_draft(draft: &PersonalDraftDto, known_tiers: &[String]) -> Resul
     if !STATUSES.contains(&draft.status.as_str()) {
         return Err(AppError::validation("无效的观看状态"));
     }
-    for (key, value) in draft.dimensions.values() {
+    for (_key, value) in draft.dimensions.values() {
         if let Some(score) = value {
-            let label = match key {
-                "story" => "剧情",
-                "characters" => "角色",
-                "direction" => "演出",
-                "animation" => "作画",
-                "music" => "音乐",
-                _ => key,
-            };
-            score_to_tenths(score, &format!("维度评分（{label}）"))?;
+            dimension_to_tenths(score)?;
         }
     }
     if draft.review.len() > 5000 {
@@ -62,7 +69,7 @@ mod tests {
             tier: Some("A".into()),
             status: "completed".into(),
             dimensions: DimensionsDto {
-                story: Some(8.0),
+                story: Some(4.0),
                 characters: None,
                 direction: None,
                 animation: None,
@@ -88,5 +95,17 @@ mod tests {
     fn rejects_unknown_tier() {
         let value = draft();
         assert!(validate_draft(&value, &["S".into()]).is_err());
+    }
+
+    #[test]
+    fn dimension_to_tenths_accepts_half_stars() {
+        assert_eq!(dimension_to_tenths(4.5).unwrap(), 45);
+    }
+
+    #[test]
+    fn dimension_to_tenths_rejects_invalid() {
+        assert!(dimension_to_tenths(4.3).is_err());
+        assert!(dimension_to_tenths(6.0).is_err());
+        assert!(dimension_to_tenths(0.0).is_err());
     }
 }

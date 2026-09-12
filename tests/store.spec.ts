@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useLibraryStore } from '../src/stores/library'
 import { allSubjects } from '../src/data/subjects'
-import { emptyDraft } from '../src/utils/draft'
+import { emptyDraft, scaleV1Dimension } from '../src/utils/draft'
 
 const KON_ID = 5680
 
@@ -27,7 +27,7 @@ describe('library store', () => {
     const store = useLibraryStore()
     const draft = emptyDraft()
     draft.score = 7.5
-    draft.dimensions.story = 8
+    draft.dimensions.story = 4
     draft.review = '很不错的社团日常'
 
     await store.add(konSubject(), draft)
@@ -38,7 +38,7 @@ describe('library store', () => {
 
     const saved = store.getEntry(KON_ID)!.personal
     expect(saved.score).toBe(7.5)
-    expect(saved.dimensions.story).toBe(8)
+    expect(saved.dimensions.story).toBe(4)
     expect(saved.review).toBe('很不错的社团日常')
   })
 
@@ -77,7 +77,7 @@ describe('library store', () => {
       const draft = emptyDraft('watching')
       draft.score = 9.8
       draft.tier = 'S'
-      draft.dimensions.direction = 10
+      draft.dimensions.direction = 5
       draft.review = '二刷之后更确定了。'
       await store.update(52991, draft)
     } finally {
@@ -90,7 +90,7 @@ describe('library store', () => {
     expect(after.personal.score).toBe(9.8)
     expect(after.personal.tier).toBe('S')
     expect(after.personal.status).toBe('watching')
-    expect(after.personal.dimensions.direction).toBe(10)
+    expect(after.personal.dimensions.direction).toBe(5)
     expect(after.personal.review).toBe('二刷之后更确定了。')
     expect(after.personal.createdAt).toBe(createdAt)
     expect(after.personal.updatedAt).toBe('2025-07-01T12:00:00.000Z')
@@ -109,10 +109,20 @@ describe('library store', () => {
     const backup = await store.exportBackup()
     const target = backup.entries.find(entry => entry.bangumiSubjectId === 52991)
     if (!target) throw new Error('missing fixture entry')
-    target.personal.dimensions = { ...target.personal.dimensions, music: 9.9 }
+    target.personal.dimensions = { ...target.personal.dimensions, music: 4 }
     const preview = await store.previewImport(backup)
     expect(preview.added).toBe(0)
     expect(preview.duplicates).toBe(12)
     expect(preview.conflicts).toBe(1)
+  })
+})
+
+describe('scaleV1Dimension', () => {
+  it('halves v1 scores and clamps sub-half-star results to 0.5', () => {
+    expect(scaleV1Dimension(8.7)).toBe(4.5)
+    expect(scaleV1Dimension(9)).toBe(4.5)
+    expect(scaleV1Dimension(0.4)).toBe(0.5)
+    expect(scaleV1Dimension(0)).toBe(0.5)
+    expect(scaleV1Dimension(null)).toBeNull()
   })
 })

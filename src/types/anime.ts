@@ -30,6 +30,7 @@ export interface PersonalDraft {
   score: number | null
   tier: Tier | null
   status: WatchStatus
+  /** 0–5 星，0.5 步进；null 表示未评 */
   dimensions: Record<DimensionKey, number | null>
   review: string
 }

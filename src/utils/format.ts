@@ -56,3 +56,27 @@ export function tierDescription(name: string | null, tiers: TierDefinition[]): s
 export function tierBadgeStyle(color: string | undefined): { backgroundColor: string } | undefined {
   return color ? { backgroundColor: color } : undefined
 }
+
+export type StarFill = 'empty' | 'half' | 'full'
+
+export function formatStars(value: number | null): string {
+  if (value === null) return ''
+  const full = Math.floor(value)
+  const half = value - full >= 0.5
+  return `${'★'.repeat(full)}${half ? '½' : ''}`
+}
+
+export function dimensionBand(value: number): string {
+  if (value >= 4.5) return '顶级'
+  if (value >= 3.5) return '优秀'
+  if (value >= 2.5) return '不错'
+  if (value >= 1.5) return '普通'
+  if (value >= 0.5) return '较差'
+  return ''
+}
+
+export function starFill(value: number | null, star: number): StarFill {
+  if (value === null || value < star - 0.5) return 'empty'
+  if (value >= star) return 'full'
+  return 'half'
+}

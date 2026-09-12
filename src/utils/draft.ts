@@ -6,6 +6,15 @@ function isValidScore(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 10
 }
 
+export function isValidDimension(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0.5 && value <= 5 && Number.isInteger(value * 2)
+}
+
+export function scaleV1Dimension(value: number | null): number | null {
+  if (value === null) return null
+  return Math.max(0.5, Math.round((value / 2) * 2) / 2)
+}
+
 export function validateDraft(draft: PersonalDraft, knownTiers: string[]): PersonalDraft {
   if (draft.score !== null && !isValidScore(draft.score)) {
     throw new Error('个人评分必须是 0–10 之间的数字')
@@ -18,8 +27,8 @@ export function validateDraft(draft: PersonalDraft, knownTiers: string[]): Perso
   }
   for (const key of dimensionKeys) {
     const value = draft.dimensions[key]
-    if (value !== null && !isValidScore(value)) {
-      throw new Error('维度评分必须是 0–10 之间的数字')
+    if (value !== null && !isValidDimension(value)) {
+      throw new Error('维度评分必须是 0.5–5 之间的半星步进')
     }
   }
   if (typeof draft.review !== 'string' || draft.review.length > 5000) {

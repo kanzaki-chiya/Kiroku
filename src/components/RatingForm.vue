@@ -8,8 +8,9 @@ import {
   type TierDefinition,
   type WatchStatus
 } from '../types/anime'
-import { cloneDraft } from '../utils/draft'
-import { dimensionLabels, statusLabels } from '../utils/format'
+import { cloneDraft, isValidDimension } from '../utils/draft'
+import { dimensionBand, dimensionLabels, statusLabels } from '../utils/format'
+import StarRatingInput from './StarRatingInput.vue'
 
 const props = defineProps<{
   initial: PersonalDraft
@@ -30,20 +31,12 @@ const tier = ref<Tier | ''>(props.initial.tier ?? '')
 const status = ref<WatchStatus>(props.initial.status)
 const review = ref(props.initial.review)
 
-const dimEnabled = reactive<Record<DimensionKey, boolean>>({
-  story: props.initial.dimensions.story !== null,
-  characters: props.initial.dimensions.characters !== null,
-  direction: props.initial.dimensions.direction !== null,
-  animation: props.initial.dimensions.animation !== null,
-  music: props.initial.dimensions.music !== null
-})
-
-const dimInputs = reactive<Record<DimensionKey, string>>({
-  story: props.initial.dimensions.story === null ? '' : String(props.initial.dimensions.story),
-  characters: props.initial.dimensions.characters === null ? '' : String(props.initial.dimensions.characters),
-  direction: props.initial.dimensions.direction === null ? '' : String(props.initial.dimensions.direction),
-  animation: props.initial.dimensions.animation === null ? '' : String(props.initial.dimensions.animation),
-  music: props.initial.dimensions.music === null ? '' : String(props.initial.dimensions.music)
+const dimValues = reactive<Record<DimensionKey, number | null>>({
+  story: props.initial.dimensions.story,
+  characters: props.initial.dimensions.characters,
+  direction: props.initial.dimensions.direction,
+  animation: props.initial.dimensions.animation,
+  music: props.initial.dimensions.music
 })
 
 const error = ref('')
@@ -63,13 +56,7 @@ const currentDraft = computed<PersonalDraft>(() => ({
   score: scoreEnabled.value ? parseLenient(scoreInput.value) : null,
   tier: tier.value === '' ? null : tier.value,
   status: status.value,
-  dimensions: {
-    story: dimEnabled.story ? parseLenient(dimInputs.story) : null,
-    characters: dimEnabled.characters ? parseLenient(dimInputs.characters) : null,
-    direction: dimEnabled.direction ? parseLenient(dimInputs.direction) : null,
-    animation: dimEnabled.animation ? parseLenient(dimInputs.animation) : null,
-    music: dimEnabled.music ? parseLenient(dimInputs.music) : null
-  },
+  dimensions: { ...dimValues },
   review: review.value
 }))
 
@@ -92,16 +79,6 @@ function sliderValue(raw: string | number): number {
   const value = parseLenient(raw)
   if (value === null) return 0
   return Math.min(10, Math.max(0, value))
-}
-
-function enableDimension(key: DimensionKey) {
-  dimEnabled[key] = true
-  if (dimInputs[key] === '') dimInputs[key] = '7'
-}
-
-function clearDimension(key: DimensionKey) {
-  dimEnabled[key] = false
-  dimInputs[key] = ''
 }
 
 function validateScoreField(raw: string | number, label: string): number | string {
@@ -129,16 +106,16 @@ function onSubmit() {
 
   const dimensions = {} as Record<DimensionKey, number | null>
   for (const key of dimensionKeys) {
-    if (!dimEnabled[key]) {
+    const value = dimValues[key]
+    if (value === null) {
       dimensions[key] = null
       continue
     }
-    const result = validateScoreField(dimInputs[key], dimensionLabels[key])
-    if (typeof result === 'string') {
-      error.value = result
+    if (!isValidDimension(value)) {
+      error.value = `${dimensionLabels[key]}需要是 0.5–5 的半星`
       return
     }
-    dimensions[key] = result
+    dimensions[key] = value
   }
 
   submitting.value = true
@@ -224,33 +201,8 @@ function onCancel() {
       <legend class="group-title">分项评分</legend>
       <div v-for="key in dimensionKeys" :key="key" class="dim-row">
         <span class="dim-label">{{ dimensionLabels[key] }}</span>
-        <template v-if="dimEnabled[key]">
-          <input
-            class="dim-range"
-            type="range"
-            min="0"
-            max="10"
-            step="0.1"
-            :value="sliderValue(dimInputs[key])"
-            :aria-label="`${dimensionLabels[key]}滑杆`"
-            @input="dimInputs[key] = ($event.target as HTMLInputElement).value"
-          />
-          <input
-            v-model="dimInputs[key]"
-            class="field-input dim-number"
-            type="number"
-            min="0"
-            max="10"
-            step="0.1"
-            inputmode="decimal"
-            :aria-label="`${dimensionLabels[key]}（0–10）`"
-          />
-          <button type="button" class="dim-clear" @click="clearDimension(key)">未评分</button>
-        </template>
-        <template v-else>
-          <span class="dim-empty">未评分</span>
-          <button type="button" class="dim-enable" @click="enableDimension(key)">评一下</button>
-        </template>
+        <StarRatingInput v-model="dimValues[key]" :label="dimensionLabels[key]" />
+        <span class="dim-band">{{ dimValues[key] === null ? '未评' : dimensionBand(dimValues[key]) }}</span>
       </div>
     </fieldset>
 
@@ -281,7 +233,13 @@ function onCancel() {
   display: flex;
   flex-direction: column;
   gap: 22px;
-  max-width: 640px;
+  max-width: 800px;
+  width: 100%;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
 }
 
 .field-group {
@@ -330,30 +288,24 @@ function onCancel() {
 }
 
 .skip-note {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--muted);
 }
 
-.score-range,
-.dim-range {
+.score-range {
   flex: 1;
   min-width: 160px;
   accent-color: var(--brand);
 }
 
-.dim-range {
-  min-width: 0;
-}
-
-.score-number,
-.dim-number {
-  width: 84px;
+.score-number {
+  width: 88px;
+  height: 44px;
   text-align: center;
-}
-
-.dim-number {
-  width: 70px;
-  flex-shrink: 0;
+  font-family: var(--font-number);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .field-pair {
@@ -366,7 +318,8 @@ function onCancel() {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 0;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .dim-label {
@@ -376,54 +329,38 @@ function onCancel() {
   flex-shrink: 0;
 }
 
-.dim-empty {
-  flex: 1;
-  font-size: 13.5px;
+.dim-band {
+  margin-left: auto;
+  min-width: 36px;
+  font-size: 12px;
   color: var(--muted);
-}
-
-.dim-enable,
-.dim-clear {
-  font-size: 12.5px;
-  color: var(--brand);
-  padding: 3px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border-strong);
   flex-shrink: 0;
-}
-
-.dim-clear {
-  padding: 4px 7px;
-}
-
-.dim-enable:hover,
-.dim-clear:hover {
-  border-color: var(--brand);
 }
 
 .review-area {
   width: 100%;
-  padding: 11px 13px;
+  min-height: 132px;
+  padding: 14px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--surface-soft);
   resize: vertical;
-  min-height: 96px;
-  line-height: 1.7;
+  line-height: 1.85;
+  color: var(--text-soft);
 }
 
 .review-area:focus {
   border-color: var(--brand);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(51, 93, 78, 0.14);
+  box-shadow: var(--focus-ring);
 }
 
 .form-error {
   margin: 0;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--danger);
-  background: #faece7;
-  border: 1px solid #eccabc;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-border);
   padding: 9px 14px;
   border-radius: var(--radius-sm);
 }
@@ -432,46 +369,29 @@ function onCancel() {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
 }
 
 .form-note {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--muted);
+}
+
+@media (max-width: 1050px) {
+  .rating-form {
+    padding: 18px;
+  }
 }
 
 @media (max-width: 640px) {
   .field-pair {
     grid-template-columns: 1fr;
   }
-}
-
-@media (max-width: 520px) {
-  .dim-row {
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr) 64px 58px;
-    gap: 8px;
-  }
-
-  .dim-number {
-    width: 64px;
-    padding: 0 4px;
-  }
-
-  .dim-empty {
-    grid-column: 2 / 4;
-  }
-
-  .dim-enable {
-    grid-column: 4;
-  }
 
   .score-range {
     min-width: 80px;
-  }
-
-  .dim-clear {
-    font-size: 12px;
   }
 }
 </style>

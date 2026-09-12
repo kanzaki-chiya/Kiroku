@@ -30,10 +30,7 @@ describe('RatingForm', () => {
     await skipCheckbox.trigger('change')
     await scoreInput(wrapper).setValue('8.5')
     await wrapper.findAll('select')[0].setValue('A')
-    const rateButton = wrapper.findAll('button').find(b => b.text() === '评一下')
-    await rateButton!.trigger('click')
-    const dimInput = wrapper.findAll('input[type="number"]')[1]
-    await dimInput.setValue('9')
+    await wrapper.get('[data-star-value="4.5"]').trigger('click')
     await wrapper.find('textarea').setValue('慢热但回味很长。')
 
     await wrapper.find('form').trigger('submit')
@@ -44,7 +41,7 @@ describe('RatingForm', () => {
     expect(draft.score).toBe(8.5)
     expect(draft.tier).toBe('A')
     expect(draft.status).toBe('completed')
-    expect(draft.dimensions.story).toBe(9)
+    expect(draft.dimensions.story).toBe(4.5)
     expect(draft.dimensions.music).toBeNull()
     expect(draft.review).toBe('慢热但回味很长。')
   })
@@ -54,7 +51,7 @@ describe('RatingForm', () => {
       score: 7.5,
       tier: 'B',
       status: 'watching',
-      dimensions: { story: 8, characters: null, direction: null, animation: null, music: null },
+      dimensions: { story: 4, characters: null, direction: null, animation: null, music: null },
       review: '原始短评'
     }
     const wrapper = mountForm(initial)

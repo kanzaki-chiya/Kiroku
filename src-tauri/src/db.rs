@@ -8,7 +8,7 @@ use crate::models::{
     CommunityDto, DimensionsDto, LibraryEntryDto, PersonalDraftDto, PersonalRecordDto, SubjectDto,
     TierDto,
 };
-use crate::validate::{now_iso, score_to_tenths, tenths_to_score};
+use crate::validate::{dimension_to_tenths, now_iso, score_to_tenths, tenths_to_score};
 
 const MIGRATION_V1: &str = r#"
 CREATE TABLE subjects (
@@ -110,22 +110,34 @@ fn migrate(conn: &Connection) -> Result<(), AppError> {
             applied_at TEXT NOT NULL
         );",
     )?;
-    let current: i64 = conn.query_row(
+    let mut current: i64 = conn.query_row(
         "SELECT COALESCE(MAX(version), 0) FROM schema_migrations",
         [],
         |row| row.get(0),
     )?;
-    if current >= 1 {
-        return Ok(());
+    if current < 1 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(MIGRATION_V1)?;
+        seed_tiers(&tx)?;
+        tx.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?1)",
+            params![now_iso()],
+        )?;
+        tx.commit()?;
+        current = 1;
     }
-    let tx = conn.unchecked_transaction()?;
-    tx.execute_batch(MIGRATION_V1)?;
-    seed_tiers(&tx)?;
-    tx.execute(
-        "INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?1)",
-        params![now_iso()],
-    )?;
-    tx.commit()?;
+    if current < 2 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute(
+            "UPDATE dimension_scores SET score = MAX(5, CAST(ROUND(score / 10.0) AS INTEGER) * 5)",
+            [],
+        )?;
+        tx.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (2, ?1)",
+            params![now_iso()],
+        )?;
+        tx.commit()?;
+    }
     Ok(())
 }
 
@@ -368,9 +380,7 @@ fn insert_dimensions(
     draft: &PersonalDraftDto,
 ) -> Result<(), AppError> {
     for (dimension, value) in draft.dimensions.values() {
-        let tenths = value
-            .map(|score| score_to_tenths(score, "维度评分"))
-            .transpose()?;
+        let tenths = value.map(dimension_to_tenths).transpose()?;
         tx.execute(
             "INSERT INTO dimension_scores (record_id, dimension, score) VALUES (?1, ?2, ?3)
              ON CONFLICT(record_id, dimension) DO UPDATE SET score = excluded.score",
@@ -754,7 +764,7 @@ mod tests {
             tier: Some("A".into()),
             status: "completed".into(),
             dimensions: DimensionsDto {
-                story: Some(8.0),
+                story: Some(4.0),
                 characters: None,
                 direction: None,
                 animation: None,
@@ -779,11 +789,11 @@ mod tests {
         let created = add_library_entry(&mut conn, &subject(2), &draft(Some(7.0))).unwrap();
         let mut next = draft(Some(9.5));
         next.review = "改过了".into();
-        next.dimensions.music = Some(8.8);
+        next.dimensions.music = Some(4.5);
         let updated =
             update_personal_record(&mut conn, 2, &next, created.personal.version).unwrap();
         assert_eq!(updated.personal.score, Some(9.5));
-        assert_eq!(updated.personal.dimensions.music, Some(8.8));
+        assert_eq!(updated.personal.dimensions.music, Some(4.5));
         assert_eq!(updated.personal.version, created.personal.version + 1);
         assert_eq!(updated.subject.name_cn, "作品");
         let stale = update_personal_record(&mut conn, 2, &next, created.personal.version).unwrap_err();
@@ -815,5 +825,88 @@ mod tests {
             assert_eq!(err.code, "VALIDATION");
             assert_eq!(err.message, "该名称为筛选保留字");
         }
+    }
+
+    #[test]
+    fn migrates_v1_dimension_tenths_to_star_tenths() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS schema_migrations (
+                version INTEGER PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            );",
+        )
+        .unwrap();
+        let tx = conn.unchecked_transaction().unwrap();
+        tx.execute_batch(MIGRATION_V1).unwrap();
+        seed_tiers(&tx).unwrap();
+        tx.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?1)",
+            params![now_iso()],
+        )
+        .unwrap();
+        tx.commit().unwrap();
+
+        conn.execute(
+            "INSERT INTO subjects (bangumi_subject_id, name, name_cn, format, created_at, updated_at)
+             VALUES (1, 'N', '作品', 'TV', 't', 't')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO personal_records (subject_id, status, review, created_at, updated_at)
+             VALUES (1, 'completed', '', 't', 't')",
+            [],
+        )
+        .unwrap();
+        let record_id = conn.last_insert_rowid();
+        conn.execute(
+            "INSERT INTO dimension_scores (record_id, dimension, score)
+             VALUES (?1, 'story', 87), (?1, 'characters', 80), (?1, 'direction', 3), (?1, 'animation', NULL)",
+            params![record_id],
+        )
+        .unwrap();
+
+        migrate(&conn).unwrap();
+
+        let story: i64 = conn
+            .query_row(
+                "SELECT score FROM dimension_scores WHERE dimension = 'story'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let characters: i64 = conn
+            .query_row(
+                "SELECT score FROM dimension_scores WHERE dimension = 'characters'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let direction: i64 = conn
+            .query_row(
+                "SELECT score FROM dimension_scores WHERE dimension = 'direction'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let animation: Option<i64> = conn
+            .query_row(
+                "SELECT score FROM dimension_scores WHERE dimension = 'animation'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(story, 45);
+        assert_eq!(characters, 40);
+        assert_eq!(direction, 5);
+        assert_eq!(animation, None);
+        let version: i64 = conn
+            .query_row("SELECT MAX(version) FROM schema_migrations", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(version, 2);
     }
 }

@@ -16,7 +16,7 @@ export const seedRecords: SeedRecord[] = [
       score: 9.6,
       tier: 'S',
       status: 'completed',
-      dimensions: { story: 9.5, characters: 9.8, direction: 9.6, animation: 9.4, music: 9.5 },
+      dimensions: { story: 5, characters: 5, direction: 5, animation: 4.5, music: 5 },
       review:
         '把"余生"两个字拍出了体温。芙莉莲每一次迟钝的回望，都像在替我问自己：和身边的人共度的那些平常日子，我有没有认真看过一眼。'
     }
@@ -29,7 +29,7 @@ export const seedRecords: SeedRecord[] = [
       score: 8.8,
       tier: 'A',
       status: 'completed',
-      dimensions: { story: 8.2, characters: 9.3, direction: 9.0, animation: 9.2, music: 9.6 },
+      dimensions: { story: 4, characters: 4.5, direction: 4.5, animation: 4.5, music: 5 },
       review:
         '把社恐的脑内小剧场拍成了 Live。livehouse 那几段演出的调度是真的顶，波奇酱迈出每一步我都跟着屏住呼吸。'
     }
@@ -42,7 +42,7 @@ export const seedRecords: SeedRecord[] = [
       score: 9.2,
       tier: 'S',
       status: 'completed',
-      dimensions: { story: 9.8, characters: 9.0, direction: 8.8, animation: 8.0, music: 8.6 },
+      dimensions: { story: 5, characters: 4.5, direction: 4.5, animation: 4, music: 4.5 },
       review:
         '前半程的日常铺垫几乎全是伏笔，回收的那一刻头皮发麻。冈部在无数条世界线里独自记得一切，这种孤独的重量少有作品能写出来。'
     }
@@ -55,7 +55,7 @@ export const seedRecords: SeedRecord[] = [
       score: 8.4,
       tier: 'A',
       status: 'completed',
-      dimensions: { story: 7.8, characters: 8.4, direction: 8.8, animation: 9.7, music: 8.9 },
+      dimensions: { story: 4, characters: 4, direction: 4.5, animation: 5, music: 4.5 },
       review:
         '画面精致到近乎奢侈。薇尔莉特学"爱"的过程有些单元剧略显刻意，但第十集那封跨越五十年的信还是把我击溃了。'
     }
@@ -68,7 +68,7 @@ export const seedRecords: SeedRecord[] = [
       score: 9.3,
       tier: 'S',
       status: 'completed',
-      dimensions: { story: 9.4, characters: 8.8, direction: 9.6, animation: 8.6, music: 9.4 },
+      dimensions: { story: 4.5, characters: 4.5, direction: 5, animation: 4.5, music: 4.5 },
       review:
         '安静到能听见雪落的声音。银古从不评判，只是见证——这种克制的姿态本身就是对生命最大的敬意。失眠的夜里重看，比任何安慰都管用。'
     }
@@ -81,7 +81,7 @@ export const seedRecords: SeedRecord[] = [
       score: 8.9,
       tier: 'A',
       status: 'completed',
-      dimensions: { story: 9.6, characters: 8.8, direction: 9.0, animation: 7.6, music: 8.2 },
+      dimensions: { story: 5, characters: 4.5, direction: 4.5, animation: 4, music: 4 },
       review:
         '剧本密度高得惊人，每一句闲聊都是线索。动物皮套底下是近年最冷峻的都市群像，结局那一下反转让我倒回去重看了一整遍。'
     }
@@ -94,7 +94,7 @@ export const seedRecords: SeedRecord[] = [
       score: 9.0,
       tier: 'A',
       status: 'completed',
-      dimensions: { story: 8.8, characters: 9.2, direction: 9.8, animation: 9.4, music: 8.8 },
+      dimensions: { story: 4.5, characters: 4.5, direction: 5, animation: 4.5, music: 4.5 },
       review:
         '汤浅政明把乒乓球画成了存在主义。画风粗粝得像草稿，却比任何精致作画都更有生命力。"英雄参上"那一幕，看一次燃一次。'
     }
@@ -107,7 +107,7 @@ export const seedRecords: SeedRecord[] = [
       score: 8.5,
       tier: 'B',
       status: 'completed',
-      dimensions: { story: 8.8, characters: 8.2, direction: 8.6, animation: 8.4, music: 9.2 },
+      dimensions: { story: 4.5, characters: 4, direction: 4.5, animation: 4, music: 4.5 },
       review:
         '把魔法少女拍成了残酷的因果装置，开创性毋庸置疑。但坦白说，我对它的敬意多过热爱——看的时候更多在分析，而不是被打动。'
     }
@@ -120,7 +120,7 @@ export const seedRecords: SeedRecord[] = [
       score: 7.9,
       tier: 'C',
       status: 'completed',
-      dimensions: { story: 7.2, characters: 7.6, direction: 8.4, animation: 9.2, music: 8.8 },
+      dimensions: { story: 3.5, characters: 4, direction: 4, animation: 4.5, music: 4.5 },
       review:
         '画面和配乐无可挑剔，泷在山顶大喊的那场戏确实动人。但故事太顺了，顺到散场之后留不下多少余味——像一场做得极美的梦。'
     }
@@ -145,7 +145,7 @@ export const seedRecords: SeedRecord[] = [
       score: 8.1,
       tier: 'B',
       status: 'completed',
-      dimensions: { story: 7.6, characters: 8.6, direction: 8.4, animation: 8.8, music: 8.0 },
+      dimensions: { story: 4, characters: 4.5, direction: 4, animation: 4.5, music: 4 },
       review:
         '日常之谜的浪漫不在谜底，在于"有人愿意认真陪你把小事想清楚"。折木和千反田的距离感拿捏得极好，最后两集的分寸堪称教科书。'
     }
@@ -158,7 +158,7 @@ export const seedRecords: SeedRecord[] = [
       score: 8.3,
       tier: 'B',
       status: 'completed',
-      dimensions: { story: 8.0, characters: 8.4, direction: 8.8, animation: 9.0, music: 8.6 },
+      dimensions: { story: 4, characters: 4, direction: 4.5, animation: 4.5, music: 4.5 },
       review:
         '十集讲完一个干净利落的坠落故事。夜之城从不为谁停留，大卫燃尽自己的方式既是反抗也是认命，后劲比想象中大得多。'
     }

@@ -17,7 +17,8 @@ import type {
   PersonalRecord,
   TierDefinition
 } from '../types/anime'
-import { cloneDraft, personalFieldsConflict, validateDraft } from '../utils/draft'
+import { dimensionKeys } from '../types/anime'
+import { cloneDraft, personalFieldsConflict, scaleV1Dimension, validateDraft } from '../utils/draft'
 import { builtinTiers } from '../utils/format'
 import { calculateStatistics, type LibraryStatistics } from '../utils/statistics'
 
@@ -338,7 +339,7 @@ export const useLibraryStore = defineStore('library', () => {
   async function exportBackup() {
     if (!desktop) {
       return {
-        formatVersion: 1,
+        formatVersion: 2,
         exportedAt: new Date().toISOString(),
         tiers: tiers.value,
         entries: entries.value.map(entry => ({
@@ -366,7 +367,16 @@ export const useLibraryStore = defineStore('library', () => {
           continue
         }
         duplicates += 1
-        if (personalFieldsConflict(existing, item.personal)) conflicts += 1
+        const incoming =
+          document.formatVersion === 1
+            ? {
+                ...item.personal,
+                dimensions: Object.fromEntries(
+                  dimensionKeys.map(key => [key, scaleV1Dimension(item.personal.dimensions[key])])
+                ) as PersonalDraft['dimensions']
+              }
+            : item.personal
+        if (personalFieldsConflict(existing, incoming)) conflicts += 1
       }
       return { added, duplicates, conflicts } satisfies ImportPreview
     }
