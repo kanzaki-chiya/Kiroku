@@ -1,6 +1,6 @@
 [package]
 name = "kiroku"
-version = "0.1.0"
+version = "0.1.1"
 description = "Kiroku · 记录"
 authors = ["Kiroku"]
 edition = "2021"
