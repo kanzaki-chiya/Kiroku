@@ -177,10 +177,10 @@ async function onDeleteData() {
 .page-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 30px;
-  line-height: 1.4;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 34px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .page-sub {
@@ -191,23 +191,24 @@ async function onDeleteData() {
 
 .panel {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  padding: 24px;
+  padding: 26px;
   margin-bottom: 20px;
 }
 
 .panel-title {
   margin: 0 0 8px;
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .panel-copy,
 .hint {
   margin: 0 0 16px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .actions {
@@ -225,7 +226,7 @@ async function onDeleteData() {
   width: 100%;
   padding: 16px;
   background: var(--surface-soft);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   margin-top: 12px;
 }
 
@@ -241,8 +242,8 @@ async function onDeleteData() {
 }
 
 .danger {
-  border-color: var(--danger-border);
   background: var(--danger-soft);
+  box-shadow: none;
 }
 
 .btn-danger {

@@ -230,13 +230,12 @@ function onCancel() {
 .rating-form {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 24px;
   max-width: 800px;
   width: 100%;
-  padding: 24px;
+  padding: 26px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
 
@@ -300,9 +299,9 @@ function onCancel() {
   width: 88px;
   height: 44px;
   text-align: center;
-  font-family: var(--font-number);
   font-size: 22px;
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text);
 }
 
@@ -339,18 +338,20 @@ function onCancel() {
   width: 100%;
   min-height: 132px;
   padding: 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface-soft);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--fill);
   resize: vertical;
-  line-height: 1.85;
-  color: var(--text-soft);
+  line-height: 1.7;
+  color: var(--text);
+  transition: background var(--motion-fast) var(--ease-snap),
+    box-shadow var(--motion-fast) var(--ease-snap);
 }
 
 .review-area:focus {
-  border-color: var(--brand);
+  background: var(--surface);
   outline: none;
-  box-shadow: var(--focus-ring);
+  box-shadow: var(--focus-ring), inset 0 0 0 1px var(--brand);
 }
 
 .form-error {
@@ -358,8 +359,7 @@ function onCancel() {
   font-size: 13px;
   color: var(--danger);
   background: var(--danger-soft);
-  border: 1px solid var(--danger-border);
-  padding: 9px 14px;
+  padding: 10px 14px;
   border-radius: var(--radius-sm);
 }
 
@@ -368,7 +368,7 @@ function onCancel() {
   justify-content: flex-end;
   gap: 10px;
   border-top: 1px solid var(--border);
-  padding-top: 18px;
+  padding-top: 20px;
 }
 
 

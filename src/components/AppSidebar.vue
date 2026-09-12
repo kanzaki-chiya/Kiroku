@@ -87,27 +87,29 @@ const tierCounts = computed(() => {
 
 <style scoped>
 .sidebar {
-  width: 208px;
+  width: 216px;
   flex-shrink: 0;
   background: var(--sidebar-bg);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
   border-right: 1px solid var(--sidebar-line);
-  padding: 30px 16px 20px;
+  padding: 28px 12px 20px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 30px;
   position: sticky;
   top: 0;
   height: 100vh;
   overflow-y: auto;
   color: var(--sidebar-text);
-  scrollbar-color: var(--sidebar-line) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 10px;
+  gap: 11px;
+  padding: 0 12px;
   color: var(--sidebar-text);
   text-decoration: none;
 }
@@ -117,9 +119,10 @@ const tierCounts = computed(() => {
 }
 
 .brand-mark {
-  width: 30px;
-  height: 36px;
+  width: 26px;
+  height: 32px;
   flex-shrink: 0;
+  color: var(--brand);
 }
 
 .brand-text {
@@ -130,57 +133,58 @@ const tierCounts = computed(() => {
 
 .brand-name {
   font-family: var(--font-logo);
-  font-size: 27px;
-  letter-spacing: 0.01em;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--sidebar-text);
 }
 
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 
 .nav-item {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 42px;
-  padding: 9px 12px;
+  gap: 9px;
+  min-height: 34px;
+  padding: 7px 12px;
   border-radius: var(--radius-sm);
-  color: var(--sidebar-muted);
+  color: var(--sidebar-text);
   font-size: 13px;
   text-decoration: none;
-  transition: background var(--motion-fast), color var(--motion-fast);
+  transition: background var(--motion-fast) var(--ease-snap),
+    transform 100ms ease-out;
+}
+
+.nav-item:active {
+  transform: scale(0.98);
 }
 
 .nav-item:hover {
   background: var(--sidebar-raised);
-  color: var(--sidebar-text);
   text-decoration: none;
 }
 
 .nav-item.is-active {
-  background: var(--sidebar-raised);
-  color: var(--sidebar-text);
+  background: var(--sidebar-active);
   font-weight: 600;
 }
 
-.nav-item.is-active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 13px;
-  bottom: 13px;
-  width: 2px;
-  border-radius: var(--radius-xs);
-  background: var(--sidebar-muted);
+.nav-item.is-active .nav-icon {
+  color: var(--brand);
 }
 
 .nav-icon {
-  color: currentColor;
+  color: var(--sidebar-muted);
   flex-shrink: 0;
+}
+
+.nav-item:hover .nav-icon {
+  color: var(--sidebar-text);
 }
 
 .nav-label {
@@ -188,42 +192,46 @@ const tierCounts = computed(() => {
 }
 
 .nav-count {
-  font-family: var(--font-number);
   font-size: 11px;
-  color: var(--sidebar-text);
+  color: var(--sidebar-muted);
   padding-left: 3px;
 }
 
 .tier-section {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding-top: 24px;
+  gap: 2px;
+  padding-top: 22px;
   border-top: 1px solid var(--sidebar-line);
 }
 
 .section-title {
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--sidebar-muted);
-  letter-spacing: .12em;
-  margin: 0 12px 10px;
+  margin: 0 12px 8px;
 }
 
 .tier-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 12px;
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
   text-decoration: none;
   color: var(--sidebar-muted);
   font-size: 12px;
-  transition: background var(--motion-fast), color var(--motion-fast);
+  transition: background var(--motion-fast) var(--ease-snap),
+    transform 100ms ease-out;
+}
+
+.tier-item:active {
+  transform: scale(0.98);
 }
 
 .tier-item .tier-badge {
-  min-width: 23px;
-  min-height: 23px;
+  min-width: 22px;
+  min-height: 22px;
   font-size: 11px;
   max-width: 62px;
 }
@@ -234,6 +242,10 @@ const tierCounts = computed(() => {
   text-decoration: none;
 }
 
+.tier-item.is-current {
+  background: var(--sidebar-active);
+}
+
 .tier-desc {
   flex: 1;
   min-width: 0;
@@ -241,7 +253,7 @@ const tierCounts = computed(() => {
 }
 
 .tier-count {
-  font: 11px var(--font-number);
+  font-size: 11px;
   color: var(--sidebar-muted);
 }
 
@@ -250,19 +262,19 @@ const tierCounts = computed(() => {
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 18px 8px 0;
+  padding: 16px 12px 0;
   border-top: 1px solid var(--sidebar-line);
 }
 
 .avatar {
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--sidebar-line);
-  border-radius: var(--radius-sm);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   background: var(--sidebar-raised);
-  color: var(--sidebar-text);
+  color: var(--sidebar-muted);
   font-family: var(--font-logo);
-  font-size: 20px;
+  font-size: 16px;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -272,12 +284,12 @@ const tierCounts = computed(() => {
 .me-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   line-height: 1.3;
 }
 
 .me-name {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--sidebar-text);
 }
@@ -288,7 +300,7 @@ const tierCounts = computed(() => {
 }
 
 .sidebar :focus-visible {
-  outline-color: var(--sidebar-text);
+  outline-color: var(--brand);
 }
 
 @media (max-width: 1050px) {

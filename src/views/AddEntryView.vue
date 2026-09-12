@@ -39,10 +39,10 @@ function onSaved(subjectId: number) {
 .page-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 30px;
-  line-height: 1.4;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 34px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .page-sub {

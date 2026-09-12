@@ -195,12 +195,19 @@ async function refreshMetadata() {
 }
 
 .missing-icon {
-  color: var(--brand);
+  color: var(--muted);
+  width: 44px;
+  height: 44px;
+  padding: 14px;
+  background: var(--fill);
+  border-radius: 50%;
+  box-sizing: content-box;
 }
 
 .missing-title {
   margin: 8px 0 0;
-  font: 600 28px var(--font-display);
+  font: 700 26px/1.25 var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 .missing-sub {
@@ -228,7 +235,7 @@ async function refreshMetadata() {
 .poster {
   padding: 6px;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lift);
 }
 
@@ -281,26 +288,25 @@ async function refreshMetadata() {
 
 .detail-main {
   min-width: 0;
-  padding: 28px;
+  padding: 32px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
 
 .detail-head {
-  margin-bottom: 20px;
-  padding-bottom: 20px;
+  margin-bottom: 22px;
+  padding-bottom: 22px;
   border-bottom: 1px solid var(--border);
 }
 
 .title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 32px;
-  line-height: 1.45;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 30px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.025em;
   overflow-wrap: anywhere;
 }
 
@@ -344,28 +350,20 @@ async function refreshMetadata() {
 }
 
 .compare-block {
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  padding: 22px;
+  border-radius: var(--radius-md);
   background: var(--surface-soft);
-  margin-bottom: 24px;
+  margin-bottom: 26px;
 }
 
 .section-title {
-  margin: 0 0 12px;
-  font-size: 13px;
+  margin: 0 0 14px;
+  font-size: 15px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   display: flex;
   align-items: center;
   gap: 9px;
-}
-
-.section-title::before {
-  content: '';
-  width: 3px;
-  height: 12px;
-  background: var(--brand);
-  border-radius: var(--radius-xs);
 }
 
 .dims {
@@ -429,7 +427,8 @@ async function refreshMetadata() {
 
 .dim-value {
   text-align: right;
-  font: 600 13px var(--font-number);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .dim-value.muted {
@@ -444,12 +443,11 @@ async function refreshMetadata() {
 
 .review-text {
   margin: 0;
-  padding: 15px 18px;
-  border-left: 2px solid var(--brand);
+  padding: 16px 18px;
   background: var(--surface-soft);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-radius: var(--radius-md);
   font-size: 13px;
-  line-height: 1.95;
+  line-height: 1.8;
   color: var(--text-soft);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

@@ -179,21 +179,34 @@ function toggleDirection() {
 }
 
 .tabs {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  border-bottom: 1px solid var(--border);
+  align-self: flex-start;
+  gap: 2px;
+  padding: 2px;
+  background: var(--fill);
+  border-radius: var(--radius-md);
 }
 
 .tab {
   position: relative;
   flex-shrink: 0;
-  padding: 0 12px 11px;
-  font-size: 12px;
-  color: var(--muted);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-soft);
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
+  border-radius: 10px;
+  transition: color var(--motion-fast) var(--ease-snap),
+    background var(--motion-fast) var(--ease-snap),
+    box-shadow var(--motion-fast) var(--ease-snap),
+    transform 100ms ease-out;
+}
+
+.tab:active {
+  transform: scale(0.97);
 }
 
 .tab:hover {
@@ -201,30 +214,22 @@ function toggleDirection() {
 }
 
 .tab.is-active {
-  color: var(--brand-deep);
+  color: var(--text);
   font-weight: 600;
-}
-
-.tab.is-active::after {
-  content: '';
-  position: absolute;
-  height: 2px;
-  background: var(--brand);
-  bottom: -1px;
-  left: 12px;
-  right: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-thumb);
 }
 
 .tab-count {
-  font: 10px var(--font-number);
+  font-size: 10px;
   color: var(--muted);
-  background: var(--sage-tint);
-  border-radius: var(--radius-xs);
-  padding: 2px 5px;
+  background: var(--fill);
+  border-radius: var(--radius-pill);
+  padding: 1px 6px;
 }
 
 .tab.is-active .tab-count {
-  color: var(--brand-deep);
+  color: var(--brand);
   background: var(--brand-soft);
 }
 
@@ -252,69 +257,80 @@ function toggleDirection() {
 
 .search-input {
   width: 100%;
-  height: 38px;
-  padding: 0 12px 0 35px;
-  border: 1px solid var(--border);
+  height: 34px;
+  padding: 0 12px 0 34px;
+  border: none;
   border-radius: var(--radius-sm);
-  background: var(--surface);
-  font-size: 12px;
+  background: var(--fill);
+  font-size: 13px;
+  transition: background var(--motion-fast) var(--ease-snap),
+    box-shadow var(--motion-fast) var(--ease-snap);
 }
 
 .search-input:focus {
-  border-color: var(--brand);
+  background: var(--surface);
   outline: none;
-  box-shadow: var(--focus-ring);
+  box-shadow: var(--focus-ring), inset 0 0 0 1px var(--brand);
 }
 
 .filter-toggle {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .filter-toggle.is-on {
-  border-color: var(--brand);
   background: var(--brand-soft);
-  color: var(--brand-deep);
+  color: var(--brand);
 }
 
 .sort-field .field-select {
-  font-size: 12px;
-  border-color: var(--border);
+  font-size: 13px;
+  height: 34px;
+  border: none;
+  background: var(--fill);
   width: 132px;
+  border-radius: var(--radius-sm);
+}
+
+.sort-field .field-select:focus {
+  box-shadow: var(--focus-ring);
 }
 
 .icon-btn {
-  width: 36px;
+  width: 34px;
+  min-height: 34px;
   padding: 0;
   justify-content: center;
 }
 
 .layout-switch {
   display: flex;
-  padding: 3px;
+  padding: 2px;
   gap: 2px;
-  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--fill);
 }
 
 .layout-btn {
   width: 30px;
-  height: 30px;
+  height: 28px;
   border-radius: var(--radius-xs);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--muted);
+  transition: background var(--motion-fast) var(--ease-snap),
+    color var(--motion-fast) var(--ease-snap),
+    box-shadow var(--motion-fast) var(--ease-snap);
 }
 
 .layout-btn:hover {
-  color: var(--brand-deep);
-  background: var(--surface-soft);
+  color: var(--text);
 }
 
 .layout-btn.is-active {
-  background: var(--brand-soft);
-  color: var(--brand-deep);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-thumb);
 }
 
 .filter-row {
@@ -323,8 +339,8 @@ function toggleDirection() {
   gap: 16px;
   padding: 16px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
   flex-wrap: wrap;
 }
 
@@ -337,16 +353,17 @@ function toggleDirection() {
 
 .filter-field .field-select {
   max-width: 100%;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .filter-label {
   font-size: 11px;
+  font-weight: 500;
   color: var(--muted);
 }
 
 .clear-btn {
   margin-left: auto;
-  font-size: 12px;
+  font-size: 13px;
 }
 </style>

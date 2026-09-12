@@ -149,8 +149,7 @@ async function onDelete(id: number) {
 <style scoped>
 .panel {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   padding: 24px;
   margin-bottom: 20px;
@@ -158,13 +157,15 @@ async function onDelete(id: number) {
 
 .panel-title {
   margin: 0 0 8px;
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .panel-copy {
   margin: 0 0 16px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .tier-list {
@@ -197,11 +198,19 @@ async function onDelete(id: number) {
 .field {
   width: 100%;
   min-width: 0;
-  height: 36px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
+  height: 34px;
+  padding: 6px 10px;
+  border: none;
   border-radius: var(--radius-sm);
-  background: var(--surface-soft);
+  background: var(--fill);
+  transition: background var(--motion-fast) var(--ease-snap),
+    box-shadow var(--motion-fast) var(--ease-snap);
+}
+
+.field:focus {
+  background: var(--surface);
+  outline: none;
+  box-shadow: var(--focus-ring), inset 0 0 0 1px var(--brand);
 }
 
 .grow {
@@ -212,7 +221,7 @@ async function onDelete(id: number) {
   width: 36px;
   height: 32px;
   padding: 0;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-xs);
   background: transparent;
 }
@@ -223,9 +232,18 @@ async function onDelete(id: number) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-soft);
+  background: var(--fill);
+  transition: background var(--motion-fast) var(--ease-snap),
+    transform 100ms ease-out;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--fill-strong);
+}
+
+.icon-btn:active:not(:disabled) {
+  transform: scale(0.94);
 }
 
 .icon-btn:disabled {

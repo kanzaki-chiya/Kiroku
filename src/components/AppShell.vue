@@ -39,7 +39,7 @@ const desktop = isTauri()
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   padding: 7px var(--page-gutter);
-  text-align: right;
+  text-align: center;
   line-height: 1.7;
 }
 

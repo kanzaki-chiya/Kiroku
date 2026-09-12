@@ -133,8 +133,8 @@ function fmt(value: number | null): string {
 <style scoped>
 .page-title {
   margin: 0;
-  font: 600 30px/1.4 var(--font-display);
-  letter-spacing: .03em;
+  font: 700 34px/1.15 var(--font-display);
+  letter-spacing: -0.025em;
 }
 
 .page-sub {
@@ -147,11 +147,10 @@ function fmt(value: number | null): string {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   margin-bottom: 24px;
-  padding: 22px 0;
+  padding: 24px 0;
 }
 
 .stat {
@@ -167,7 +166,8 @@ function fmt(value: number | null): string {
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--muted);
   display: inline-flex;
   align-items: center;
@@ -177,16 +177,17 @@ function fmt(value: number | null): string {
 
 .mock {
   font-size: 9px;
-  padding: 0 5px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  background: var(--slate-soft);
-  color: var(--slate);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--fill);
+  color: var(--muted);
 }
 
 .stat-value {
-  font: 700 32px/1.2 var(--font-number);
-  letter-spacing: -.04em;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
 }
 
 .stat-value.mine {
@@ -199,9 +200,8 @@ function fmt(value: number | null): string {
 
 .panel {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 24px;
+  border-radius: var(--radius-lg);
+  padding: 26px;
   margin-bottom: 22px;
   box-shadow: var(--shadow-card);
   min-width: 0;
@@ -209,19 +209,12 @@ function fmt(value: number | null): string {
 
 .panel-title {
   margin: 0 0 20px;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   display: flex;
   align-items: center;
   gap: 9px;
-}
-
-.panel-title::before {
-  content: '';
-  width: 3px;
-  height: 12px;
-  border-radius: var(--radius-xs);
-  background: var(--brand);
 }
 
 .panel-empty {
@@ -247,24 +240,25 @@ function fmt(value: number | null): string {
 
 .bin-label {
   width: 46px;
-  font: 11px var(--font-number);
+  font-size: 11px;
   color: var(--text-soft);
   flex-shrink: 0;
 }
 
 .bin-track {
   flex: 1;
-  height: 18px;
-  border-radius: var(--radius-xs);
-  background: var(--surface-soft);
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--fill);
   overflow: hidden;
 }
 
 .bin-fill {
   height: 100%;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
   background: var(--brand);
   min-width: 0;
+  transition: width 500ms var(--ease-spring);
 }
 
 .bin-count {
@@ -302,7 +296,7 @@ function fmt(value: number | null): string {
   border-bottom: 1px solid var(--border);
   text-decoration: none;
   color: inherit;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .diff-list li:last-child .diff-row {
@@ -314,29 +308,30 @@ function fmt(value: number | null): string {
 }
 
 .diff-row:hover .diff-title {
-  color: var(--brand-deep);
+  color: var(--brand);
 }
 
 .diff-title {
   min-width: 0;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .diff-scores {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 
 .diff-delta {
   text-align: right;
-  font: 600 13px var(--font-number);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .diff-delta.positive {
-  color: var(--brand-deep);
+  color: var(--brand);
 }
 
 .diff-delta.negative {
@@ -349,43 +344,48 @@ function fmt(value: number | null): string {
   gap: 12px;
   text-decoration: none;
   color: inherit;
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  padding: 22px;
+  border-radius: var(--radius-md);
   background: var(--surface-soft);
+  transition: transform 280ms var(--ease-spring), box-shadow 280ms var(--ease-spring);
 }
 
 .highest:hover {
   text-decoration: none;
-  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
 }
 
 .crown {
-  color: var(--brand-deep);
+  color: var(--score-gold);
   margin-top: 5px;
 }
 
 .highest-text {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
 .highest-name {
-  font: 600 21px/1.4 var(--font-display);
+  font: 700 20px/1.3 var(--font-display);
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
 
 .highest-sub {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   overflow-wrap: anywhere;
 }
 
 .highest-score {
   grid-column: 2;
-  font: 700 44px/1.1 var(--font-number);
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
   color: var(--score-gold);
 }
 
@@ -409,15 +409,17 @@ function fmt(value: number | null): string {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
-  color: var(--brand-deep);
-  border: 1px solid var(--border-strong);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand);
+  background: var(--fill);
   border-radius: var(--radius-sm);
-  padding: 5px 12px;
+  padding: 6px 12px;
+  transition: background var(--motion-fast) var(--ease-snap);
 }
 
 .retry:hover {
-  border-color: var(--brand);
+  background: var(--fill-strong);
 }
 
 @media (max-width: 1050px) {

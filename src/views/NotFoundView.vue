@@ -23,12 +23,12 @@ import { Compass } from 'lucide-vue-next'
 }
 
 .icon {
-  color: var(--brand);
-  width: 48px;
-  height: 48px;
-  padding: 14px;
-  background: var(--brand-soft);
-  border-radius: var(--radius-lg);
+  color: var(--muted);
+  width: 44px;
+  height: 44px;
+  padding: 16px;
+  background: var(--fill);
+  border-radius: 50%;
   box-sizing: content-box;
 }
 
@@ -36,9 +36,9 @@ import { Compass } from 'lucide-vue-next'
   margin: 0;
   font-family: var(--font-display);
   font-size: 30px;
-  line-height: 1.4;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .sub {

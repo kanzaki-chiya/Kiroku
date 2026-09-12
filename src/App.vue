@@ -37,27 +37,27 @@ const library = useLibraryStore()
 }
 
 .notice {
-  background: var(--sidebar-bg);
-  color: var(--sidebar-text);
+  background: rgba(28, 28, 30, 0.88);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  color: #f5f5f7;
   font-size: 13px;
-  padding: 14px 20px;
-  border: 1px solid var(--sidebar-line);
-  border-left: 3px solid var(--sidebar-muted);
-  border-radius: var(--radius-sm);
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-lift);
   overflow-wrap: anywhere;
-  animation: notice-in 180ms ease-out;
+  animation: notice-in 300ms var(--ease-spring);
 }
 
 @keyframes notice-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(10px) scale(0.96);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -75,17 +75,18 @@ const library = useLibraryStore()
 
 .boot-fail::before {
   content: '';
-  width: 34px;
-  height: 42px;
-  border: 2px solid var(--brand);
-  border-radius: var(--radius-xs);
-  box-shadow: 6px -6px 0 var(--brand-soft);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--brand-soft);
+  box-shadow: var(--shadow-card);
   margin-bottom: 18px;
 }
 
 .boot-title {
   margin: 0;
-  font: 600 30px/1.5 var(--font-display);
+  font: 700 30px/1.2 var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 .boot-message, .boot-hint {

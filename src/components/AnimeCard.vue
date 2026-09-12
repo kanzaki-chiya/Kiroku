@@ -56,17 +56,20 @@ const tierStyle = computed(() =>
   text-decoration: none;
   color: inherit;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  transition: transform var(--motion-fast), box-shadow var(--motion-fast), border-color var(--motion-fast);
+  transition: transform 280ms var(--ease-spring), box-shadow 280ms var(--ease-spring);
 }
 
 .card:hover {
   text-decoration: none;
   transform: translateY(-3px);
-  border-color: var(--border-strong);
   box-shadow: var(--shadow-lift);
+}
+
+.card:active {
+  transform: scale(0.98);
+  transition-duration: 100ms;
 }
 
 .cover-wrap {
@@ -76,18 +79,18 @@ const tierStyle = computed(() =>
 }
 
 .cover-wrap :deep(.cover) {
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
 }
 
 .card-tier {
   position: absolute;
-  top: 10px;
-  left: -5px;
-  min-width: 30px;
-  min-height: 29px;
-  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
-  box-shadow: var(--shadow-card);
-  max-width: calc(100% - 10px);
+  top: 8px;
+  left: 8px;
+  min-width: 28px;
+  min-height: 27px;
+  border-radius: var(--radius-xs);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.24);
+  max-width: calc(100% - 16px);
 }
 
 .status-chip {
@@ -96,25 +99,29 @@ const tierStyle = computed(() =>
   right: 8px;
   padding: 3px 8px;
   font-size: 10px;
-  border-radius: var(--radius-xs);
+  font-weight: 500;
+  border-radius: var(--radius-pill);
   background: var(--cover-overlay);
-  color: var(--on-brand);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
 }
 
 .card-title {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text);
-  line-height: 1.6;
+  line-height: 1.5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .card-meta {
-  margin: 3px 0 0;
-  font-size: 11px;
+  margin: 2px 0 0;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -123,23 +130,19 @@ const tierStyle = computed(() =>
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 12px;
-  padding-top: 9px;
-  border-top: 1px solid var(--border);
+  margin-top: 10px;
 }
 
 .rating {
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
-  font-family: var(--font-number);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .rating-label {
-  font-family: var(--font-body);
   font-size: 11px;
   font-weight: 400;
   color: var(--muted);
@@ -152,13 +155,14 @@ const tierStyle = computed(() =>
 .rating.mine .star {
   align-self: center;
   width: 11px;
-  color: var(--brand-deep);
-  fill: var(--brand-deep);
+  color: var(--score-gold);
+  fill: var(--score-gold);
 }
 
 .personal-number {
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 700;
+  letter-spacing: -0.02em;
   line-height: 1;
   color: var(--score-gold);
 }

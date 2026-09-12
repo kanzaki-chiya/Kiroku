@@ -120,24 +120,24 @@ function resetAll() {
 <style scoped>
 .page-head {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .page-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 32px;
-  font-weight: 600;
-  line-height: 1.4;
-  letter-spacing: .04em;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
 }
 
 .page-sub {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -166,24 +166,31 @@ function resetAll() {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 64px 20px;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-md);
+  padding: 72px 20px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
+  box-shadow: var(--shadow-card);
   text-align: center;
 }
 
 .empty-icon {
-  color: var(--brand);
+  color: var(--muted);
+  width: 40px;
+  height: 40px;
+  padding: 12px;
+  background: var(--fill);
+  border-radius: 50%;
+  box-sizing: content-box;
 }
 
 .empty-title {
-  margin: 6px 0 0;
-  font: 600 22px var(--font-display);
+  margin: 8px 0 0;
+  font: 700 20px/1.3 var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 .empty-sub {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-size: 13px;
   color: var(--muted);
 }

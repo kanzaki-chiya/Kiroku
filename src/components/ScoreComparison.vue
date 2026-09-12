@@ -57,27 +57,29 @@ const deltaText = computed(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--muted);
 }
 
 .score-label .star {
-  color: var(--brand-deep);
-  fill: var(--brand-deep);
+  color: var(--score-gold);
+  fill: var(--score-gold);
 }
 
 .mock {
   font-size: 9px;
-  padding: 0 5px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  background: var(--slate-soft);
-  color: var(--slate);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--fill);
+  color: var(--muted);
 }
 
 .score-value {
-  font: 700 38px/1 var(--font-number);
-  letter-spacing: -0.05em;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
 }
 
 .mine .score-value {
@@ -90,17 +92,17 @@ const deltaText = computed(() => {
 
 .delta {
   margin: 0 0 0 auto;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 6px 10px;
-  border-radius: var(--radius-xs);
-  background: var(--sage-tint);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--fill);
   color: var(--text-soft);
 }
 
 .delta.positive {
   background: var(--brand-soft);
-  color: var(--brand-deep);
+  color: var(--brand);
 }
 
 .delta.negative {

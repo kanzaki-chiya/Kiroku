@@ -85,10 +85,10 @@ function onCancel() {
 .page-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 30px;
-  line-height: 1.4;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 34px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .form-wrap {
@@ -106,7 +106,8 @@ function onCancel() {
 
 .missing-title {
   margin: 8px 0 0;
-  font-size: 22px;
+  font: 700 24px/1.25 var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 .missing-sub {

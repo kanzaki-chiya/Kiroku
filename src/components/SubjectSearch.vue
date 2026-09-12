@@ -196,7 +196,7 @@ onBeforeUnmount(() => {
                   <span v-if="!desktop" class="mock">Mock</span>
                 </span>
               </span>
-              <span class="result-action">选择 →</span>
+              <span class="result-action">选择 ›</span>
             </button>
             <template v-else>
               <span class="result-main">
@@ -248,7 +248,7 @@ onBeforeUnmount(() => {
                       <span v-if="!desktop" class="mock">Mock</span>
                     </span>
                   </span>
-                  <span class="result-action">选择 →</span>
+                  <span class="result-action">选择 ›</span>
                 </button>
               </li>
             </ul>
@@ -310,17 +310,19 @@ onBeforeUnmount(() => {
 .search-input {
   width: 100%;
   height: 46px;
-  padding: 0 14px 0 37px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  font-size: 14.5px;
+  padding: 0 14px 0 38px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--fill);
+  font-size: 15px;
+  transition: background var(--motion-fast) var(--ease-snap),
+    box-shadow var(--motion-fast) var(--ease-snap);
 }
 
 .search-input:focus {
-  border-color: var(--brand);
+  background: var(--surface);
   outline: none;
-  box-shadow: var(--focus-ring);
+  box-shadow: var(--focus-ring), inset 0 0 0 1px var(--brand);
 }
 
 .state-line {
@@ -341,14 +343,16 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 5px;
   font-size: 13px;
+  font-weight: 500;
   color: var(--brand);
-  border: 1px solid var(--border-strong);
+  background: var(--fill);
   border-radius: var(--radius-sm);
-  padding: 3px 12px;
+  padding: 5px 12px;
+  transition: background var(--motion-fast) var(--ease-snap);
 }
 
 .retry:hover {
-  border-color: var(--brand);
+  background: var(--fill-strong);
 }
 
 .result-list {
@@ -357,7 +361,7 @@ onBeforeUnmount(() => {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   max-width: 800px;
 }
 
@@ -367,10 +371,10 @@ onBeforeUnmount(() => {
   gap: 0;
   width: 100%;
   text-align: left;
-  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--shadow-card);
+  transition: transform 280ms var(--ease-spring), box-shadow 280ms var(--ease-spring);
 }
 
 .result-main {
@@ -384,19 +388,20 @@ onBeforeUnmount(() => {
 
 .result-main.as-button {
   border-radius: var(--radius-md);
+  transition: background var(--motion-fast) var(--ease-snap);
 }
 
-.result-main.as-button:hover {
-  background: var(--surface-soft);
+.result-main.as-button:active {
+  background: var(--fill);
 }
 
 .result:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-lift);
 }
 
 .result.collected {
   background: var(--surface-soft);
+  box-shadow: none;
 }
 
 .thumb {
@@ -418,6 +423,7 @@ onBeforeUnmount(() => {
 .result-title {
   font-size: 15px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
 
@@ -440,15 +446,15 @@ onBeforeUnmount(() => {
 
 .mock {
   font-size: 10px;
-  padding: 0 5px;
-  border-radius: var(--radius-xs);
-  background: var(--slate-soft);
-  color: var(--slate);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--fill);
+  color: var(--muted);
 }
 
 .result-action {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--brand);
   flex-shrink: 0;
 }
@@ -475,9 +481,9 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 18px;
   padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--surface);
+  box-shadow: var(--shadow-card);
   max-width: 800px;
 }
 
@@ -514,14 +520,16 @@ onBeforeUnmount(() => {
   align-self: flex-start;
   margin-top: 8px;
   font-size: 12.5px;
+  font-weight: 500;
   color: var(--brand);
-  border: 1px solid var(--border-strong);
+  background: var(--fill);
   border-radius: var(--radius-sm);
-  padding: 3px 12px;
+  padding: 5px 12px;
+  transition: background var(--motion-fast) var(--ease-snap);
 }
 
 .reselect:hover {
-  border-color: var(--brand);
+  background: var(--fill-strong);
 }
 
 .add-error {

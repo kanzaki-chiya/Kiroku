@@ -22,7 +22,7 @@ const excerpt = computed(
         {{ statusLabels[entry.personal.status] }}
       </p>
       <p class="featured-excerpt">{{ excerpt }}</p>
-      <span class="featured-link">查看详情 →</span>
+      <span class="featured-link">查看详情 ›</span>
     </div>
     <div class="featured-art" aria-hidden="true">
       <img :src="entry.subject.coverUrl" :alt="''" />
@@ -34,41 +34,44 @@ const excerpt = computed(
 .featured {
   display: flex;
   align-items: stretch;
-  height: 136px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  height: 150px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
   overflow: hidden;
   text-decoration: none;
   color: inherit;
   box-shadow: var(--shadow-card);
-  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+  transition: transform 280ms var(--ease-spring), box-shadow 280ms var(--ease-spring);
 }
 
 .featured:hover {
   text-decoration: none;
-  border-color: var(--border-strong);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-lift);
+}
+
+.featured:active {
+  transform: scale(0.99);
+  transition-duration: 100ms;
 }
 
 .featured-text {
   position: relative;
   flex: 1;
   min-width: 0;
-  padding: 18px 24px 18px 28px;
+  padding: 20px 24px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto auto 1fr;
   align-items: center;
-  gap: 3px 18px;
-  border-left: 3px solid var(--brand);
+  gap: 4px 18px;
 }
 
 .caption {
   margin: 0;
-  font-size: 10px;
-  letter-spacing: .12em;
-  color: var(--brand-deep);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--brand);
   font-weight: 600;
   grid-column: 1;
 }
@@ -76,9 +79,10 @@ const excerpt = computed(
 .featured-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 23px;
-  line-height: 1.4;
-  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text);
   grid-column: 1;
   white-space: nowrap;
@@ -88,16 +92,16 @@ const excerpt = computed(
 
 .featured-meta {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   grid-column: 2;
   grid-row: 1;
 }
 
 .featured-excerpt {
-  margin: 4px 0 0;
-  font-size: 12px;
-  line-height: 1.7;
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
   color: var(--text-soft);
   overflow: hidden;
   display: -webkit-box;
@@ -108,9 +112,9 @@ const excerpt = computed(
 }
 
 .featured-link {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--brand-deep);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand);
   grid-column: 2;
   grid-row: 3;
   align-self: end;
@@ -118,11 +122,13 @@ const excerpt = computed(
 }
 
 .featured-art {
-  width: 164px;
+  width: 190px;
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
-  background: var(--slate-soft);
+  background: var(--fill);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 22%);
+  mask-image: linear-gradient(to right, transparent, #000 22%);
 }
 
 .featured-art img {
@@ -131,6 +137,11 @@ const excerpt = computed(
   object-fit: cover;
   object-position: center 28%;
   display: block;
+  transition: transform 500ms var(--ease-spring);
+}
+
+.featured:hover .featured-art img {
+  transform: scale(1.04);
 }
 
 @media (max-width: 1050px) {
@@ -145,7 +156,7 @@ const excerpt = computed(
   }
 
   .featured-title {
-    font-size: 21px;
+    font-size: 20px;
     grid-column: 1 / 3;
   }
 
