@@ -8,13 +8,13 @@
 [![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**English** · [简体中文](README.md)
+[简体中文](README.md) · **English**
 
 ---
 
 ## 📖 Overview
 
-**Kiroku** (derived from the Japanese word「記録」for *record* or *archive*) is an elegant, lightweight desktop client designed for anime enthusiasts to catalog, rate, and reflect on their viewing journey.
+**Kiroku** is an elegant, lightweight desktop client designed for anime enthusiasts to catalog, rate, and reflect on their viewing journey.
 
 In an era where modern media trackers lock user data behind commercial walled gardens, algorithm-driven rankings, and privacy risks, Kiroku embraces a strict **Local-First** philosophy:
 

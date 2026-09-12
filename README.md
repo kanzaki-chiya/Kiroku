@@ -8,13 +8,13 @@
 [![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[English](README_EN.md) · **简体中文**
+**简体中文** · [English](README_EN.md)
 
 ---
 
 ## 📖 产品概述
 
-**Kiroku**（取自日语「記録」，意为记录、档案）是一款专为动画爱好者打造的个人番剧评分与收藏管理桌面客户端。
+**Kiroku** 是一款专为动画爱好者打造的个人番剧评分与收藏管理桌面客户端。
 
 在算法推荐与商业平台繁盛的当下，个人的观影记录往往受困于中心化服务的壁垒、隐私窥探或突如其来的平台关停。Kiroku 坚持**本地优先（Local-First）**与**数据主权**理念：
 
