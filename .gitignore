@@ -4,3 +4,7 @@ src-tauri/target
 src-tauri/gen
 *.local
 .DS_Store
+
+# 开发文档，不入库
+AGENTS.md
+BACKEND_PLAN.md
