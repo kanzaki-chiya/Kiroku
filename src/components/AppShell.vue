@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { isTauri } from '../runtime'
 import AppSidebar from './AppSidebar.vue'
+import TitleBar from './TitleBar.vue'
 
 const desktop = isTauri()
 </script>
@@ -9,6 +10,7 @@ const desktop = isTauri()
   <div class="shell">
     <AppSidebar />
     <div class="main">
+      <TitleBar v-if="desktop" />
       <div v-if="!desktop" class="demo-banner" role="note">
         演示模式 · 修改仅在本次打开期间保留，刷新后恢复示例。资料及社区评分均为 Mock。
       </div>

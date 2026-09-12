@@ -26,7 +26,15 @@ const tierCounts = computed(() => {
 
 <template>
   <aside class="sidebar">
-    <RouterLink to="/library" class="brand">
+    <div v-if="desktop" class="drag-pad" data-tauri-drag-region>
+      <svg class="pad-mark" viewBox="0 0 30 36" fill="none" aria-hidden="true">
+        <path d="M7 5h17v25H7z" stroke="currentColor" stroke-width="1.4" />
+        <path d="M3 9v25h17M11 5v25M15 11h5M15 15h5" stroke="currentColor" stroke-width="1.4" />
+        <path d="M19 3v6l2-1.4L23 9V3z" fill="currentColor" />
+      </svg>
+      <span class="pad-name">Kiroku</span>
+    </div>
+    <RouterLink v-else to="/library" class="brand">
       <svg class="brand-mark" viewBox="0 0 30 36" fill="none" aria-hidden="true">
         <path d="M7 5h17v25H7z" stroke="currentColor" stroke-width="1.2" />
         <path d="M3 9v25h17M11 5v25M15 11h5M15 15h5" stroke="currentColor" stroke-width="1.2" />
@@ -103,6 +111,33 @@ const tierCounts = computed(() => {
   overflow-y: auto;
   color: var(--sidebar-text);
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.drag-pad {
+  height: 38px;
+  margin: -28px -12px 0;
+  padding: 0 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pad-mark {
+  width: 13px;
+  height: 16px;
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+.pad-name {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .brand {
