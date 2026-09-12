@@ -1,17 +1,27 @@
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { ref, shallowRef, watch } from 'vue'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-vue-next'
 import { BackendError } from '../services/errors'
 import { useLibraryStore } from '../stores/library'
 import { useNotices } from '../stores/notices'
+import type { TierDefinition } from '../types/anime'
 import { tierBadgeStyle } from '../utils/format'
 
 const store = useLibraryStore()
 const { push } = useNotices()
 const busy = shallowRef(false)
+const rows = ref<TierDefinition[]>([])
 const draftName = shallowRef('')
 const draftDescription = shallowRef('')
 const draftColor = shallowRef('#335d4e')
+
+watch(
+  () => store.tiers,
+  value => {
+    rows.value = value.map(tier => ({ ...tier }))
+  },
+  { immediate: true, deep: true }
+)
 
 async function run(action: () => Promise<void>) {
   if (busy.value) return
@@ -25,13 +35,20 @@ async function run(action: () => Promise<void>) {
   }
 }
 
-function referenced(name: string) {
-  return store.entries.some(entry => entry.personal.tier === name)
+function referenced(id: number) {
+  const saved = store.tiers.find(tier => tier.id === id)
+  if (!saved) return false
+  return store.entries.some(entry => entry.personal.tier === saved.name)
 }
 
-async function onSaveExisting(id: number, name: string, description: string, color: string) {
+async function onSaveExisting(row: TierDefinition) {
   await run(async () => {
-    await store.saveTier({ id, name, description, color })
+    await store.saveTier({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      color: row.color
+    })
     push(store.desktop ? '已保存分档' : '已更新分档（演示模式不持久化）')
   })
 }
@@ -86,12 +103,12 @@ async function onDelete(id: number) {
     </p>
 
     <ul class="tier-list">
-      <li v-for="(tier, index) in store.tiers" :key="tier.id" class="tier-row">
-        <span class="tier-badge" :style="tierBadgeStyle(tier.color)">{{ tier.name }}</span>
-        <input v-model="tier.name" class="field" aria-label="分档名称" />
-        <input v-model="tier.description" class="field grow" aria-label="分档说明" />
-        <input v-model="tier.color" class="color" type="color" aria-label="分档颜色" />
-        <button type="button" class="btn btn-ghost" :disabled="busy" @click="onSaveExisting(tier.id, tier.name, tier.description, tier.color)">
+      <li v-for="(row, index) in rows" :key="row.id" class="tier-row">
+        <span class="tier-badge" :style="tierBadgeStyle(row.color)">{{ row.name }}</span>
+        <input v-model="row.name" class="field" aria-label="分档名称" />
+        <input v-model="row.description" class="field grow" aria-label="分档说明" />
+        <input v-model="row.color" class="color" type="color" aria-label="分档颜色" />
+        <button type="button" class="btn btn-ghost" :disabled="busy" @click="onSaveExisting(row)">
           保存
         </button>
         <button type="button" class="icon-btn" :disabled="busy || index === 0" aria-label="上移" @click="onMove(index, -1)">
@@ -100,7 +117,7 @@ async function onDelete(id: number) {
         <button
           type="button"
           class="icon-btn"
-          :disabled="busy || index === store.tiers.length - 1"
+          :disabled="busy || index === rows.length - 1"
           aria-label="下移"
           @click="onMove(index, 1)"
         >
@@ -109,10 +126,10 @@ async function onDelete(id: number) {
         <button
           type="button"
           class="icon-btn danger"
-          :disabled="busy || tier.builtin || referenced(tier.name)"
-          :title="tier.builtin ? '内置分档不能删除' : referenced(tier.name) ? '仍被收藏引用' : '删除'"
+          :disabled="busy || row.builtin || referenced(row.id)"
+          :title="row.builtin ? '内置分档不能删除' : referenced(row.id) ? '仍被收藏引用' : '删除'"
           aria-label="删除"
-          @click="onDelete(tier.id)"
+          @click="onDelete(row.id)"
         >
           <Trash2 :size="14" />
         </button>

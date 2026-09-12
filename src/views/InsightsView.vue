@@ -1,20 +1,25 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
-import { Crown } from 'lucide-vue-next'
+import { Crown, RotateCcw } from 'lucide-vue-next'
 import { useLibraryStore } from '../stores/library'
 import { formatDelta, formatScore } from '../utils/format'
 import type { LibraryStatistics } from '../utils/statistics'
 
 const store = useLibraryStore()
 const stats = shallowRef<LibraryStatistics | null>(null)
+const statsError = shallowRef('')
 
-watch(
-  () => store.count,
-  async () => {
+async function load() {
+  try {
+    statsError.value = ''
     stats.value = await store.getStatistics()
-  },
-  { immediate: true }
-)
+  } catch (error) {
+    stats.value = null
+    statsError.value = error instanceof Error ? error.message : '统计读取失败'
+  }
+}
+
+watch(() => store.count, () => { void load() }, { immediate: true })
 
 const maxBin = computed(() => Math.max(1, ...(stats.value?.bins.map(b => b.count) ?? [0])))
 
@@ -116,6 +121,12 @@ function fmt(value: number | null): string {
       Bangumi 社区」的均值，正数代表我更喜欢。分项评分不参与总分计算。
     </p>
     </template>
+    <div v-else-if="statsError" class="state-line error" role="alert">
+      <span>{{ statsError }}</span>
+      <button type="button" class="retry" @click="load">
+        <RotateCcw :size="13" aria-hidden="true" />重试
+      </button>
+    </div>
   </div>
 </template>
 
@@ -413,5 +424,28 @@ function fmt(value: number | null): string {
     grid-column: 2;
     grid-row: 1 / 3;
   }
+}
+
+.state-line.error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--danger);
+  font-size: 13.5px;
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--brand);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+
+.retry:hover {
+  border-color: var(--brand);
 }
 </style>

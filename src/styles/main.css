@@ -14,11 +14,6 @@
   --slate: #526b88;
   --slate-soft: #e9eef4;
   --sage-tint: #e4eae3;
-  --tier-s: #b8562a;
-  --tier-a: #335d4e;
-  --tier-b: #526b88;
-  --tier-c: #5f7154;
-  --tier-d: #8a6a5c;
   --danger: #a8452c;
   --radius-sm: 8px;
   --radius-md: 11px;
@@ -187,11 +182,7 @@ textarea {
   letter-spacing: 0.02em;
 }
 
-.tier-S { background: var(--tier-s); }
-.tier-A { background: var(--tier-a); }
-.tier-B { background: var(--tier-b); }
-.tier-C { background: var(--tier-c); }
-.tier-D { background: var(--tier-d); }
+
 .tier-none { background: #68766c; }
 
 .page {

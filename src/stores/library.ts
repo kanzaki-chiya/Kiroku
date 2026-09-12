@@ -270,7 +270,11 @@ export const useLibraryStore = defineStore('library', () => {
     }
     const name = payload.name.trim()
     if (!name || name.length > 20) throw new Error('分档名称不能为空且不超过 20 字')
+    if (name === 'all' || name === 'unassigned') throw new Error('该名称为筛选保留字')
     if (!payload.color.trim()) throw new Error('分档颜色不能为空')
+    if (tiers.value.some(tier => tier.name === name && tier.id !== payload.id)) {
+      throw new Error('分档名称已存在')
+    }
     if (payload.id !== undefined) {
       const index = tiers.value.findIndex(tier => tier.id === payload.id)
       if (index < 0) throw new Error('分档不存在')

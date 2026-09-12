@@ -184,8 +184,19 @@ pub fn save_tier(conn: &Connection, payload: crate::models::SaveTierPayload) -> 
     if name.is_empty() || name.len() > 20 {
         return Err(AppError::validation("分档名称不能为空且不超过 20 字"));
     }
+    if matches!(name, "all" | "unassigned") {
+        return Err(AppError::validation("该名称为筛选保留字"));
+    }
     if payload.color.trim().is_empty() {
         return Err(AppError::validation("分档颜色不能为空"));
+    }
+    let clash: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM tiers WHERE name = ?1 AND id != ?2",
+        params![name, payload.id.unwrap_or(0)],
+        |row| row.get(0),
+    )?;
+    if clash > 0 {
+        return Err(AppError::duplicate("分档名称已存在"));
     }
     if let Some(id) = payload.id {
         let exists: i64 = conn.query_row(
@@ -777,5 +788,32 @@ mod tests {
         assert_eq!(updated.subject.name_cn, "作品");
         let stale = update_personal_record(&mut conn, 2, &next, created.personal.version).unwrap_err();
         assert_eq!(stale.code, "CONFLICT");
+    }
+
+    fn tier_payload(name: &str) -> crate::models::SaveTierPayload {
+        crate::models::SaveTierPayload {
+            id: None,
+            name: name.into(),
+            description: "说明".into(),
+            color: "#335d4e".into(),
+        }
+    }
+
+    #[test]
+    fn save_tier_rejects_duplicate_name() {
+        let conn = open_memory().unwrap();
+        let err = save_tier(&conn, tier_payload("A")).unwrap_err();
+        assert_eq!(err.code, "DUPLICATE");
+        assert_eq!(err.message, "分档名称已存在");
+    }
+
+    #[test]
+    fn save_tier_rejects_reserved_names() {
+        let conn = open_memory().unwrap();
+        for name in ["all", "unassigned"] {
+            let err = save_tier(&conn, tier_payload(name)).unwrap_err();
+            assert_eq!(err.code, "VALIDATION");
+            assert_eq!(err.message, "该名称为筛选保留字");
+        }
     }
 }
