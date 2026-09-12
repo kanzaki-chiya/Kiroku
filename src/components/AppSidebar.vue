@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { BarChart3, Library, Settings } from 'lucide-vue-next'
+import { BarChart3, Library, Monitor, Moon, Settings, Sun } from 'lucide-vue-next'
 import { isTauri } from '../runtime'
+import { themeMode, type ThemeMode } from '../services/theme'
 import { useLibraryStore } from '../stores/library'
 import { useLibraryViewStore } from '../stores/libraryView'
 import { tierBadgeStyle, tierDescription } from '../utils/format'
@@ -11,6 +12,12 @@ const desktop = isTauri()
 const store = useLibraryStore()
 const viewState = useLibraryViewStore()
 const route = useRoute()
+
+const themeOptions: { value: ThemeMode; label: string; icon: typeof Monitor }[] = [
+  { value: 'system', label: '跟随系统', icon: Monitor },
+  { value: 'light', label: '浅色', icon: Sun },
+  { value: 'dark', label: '深色', icon: Moon }
+]
 
 const tierCounts = computed(() => {
   const counts = new Map<string, number>()
@@ -83,12 +90,29 @@ const tierCounts = computed(() => {
       </RouterLink>
     </div>
 
-    <div v-if="!desktop" class="me">
-      <span class="avatar" aria-hidden="true">K</span>
-      <span class="me-text">
-        <span class="me-name">本地演示</span>
-        <span class="me-sub">Demo 数据 · 不持久化</span>
-      </span>
+    <div class="side-foot">
+      <div class="theme-switch" role="group" aria-label="外观主题">
+        <button
+          v-for="opt in themeOptions"
+          :key="opt.value"
+          type="button"
+          class="theme-btn"
+          :class="{ 'is-active': themeMode === opt.value }"
+          :aria-pressed="themeMode === opt.value"
+          :aria-label="opt.label"
+          :title="opt.label"
+          @click="themeMode = opt.value"
+        >
+          <component :is="opt.icon" :size="13" aria-hidden="true" />
+        </button>
+      </div>
+      <div v-if="!desktop" class="me">
+        <span class="avatar" aria-hidden="true">K</span>
+        <span class="me-text">
+          <span class="me-name">本地演示</span>
+          <span class="me-sub">Demo 数据 · 不持久化</span>
+        </span>
+      </div>
     </div>
   </aside>
 </template>
@@ -292,13 +316,56 @@ const tierCounts = computed(() => {
   color: var(--sidebar-muted);
 }
 
-.me {
+.side-foot {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 12px 0;
+  border-top: 1px solid var(--sidebar-line);
+}
+
+.theme-switch {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--sidebar-raised);
+  border-radius: var(--radius-md);
+}
+
+.theme-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  border-radius: 9px;
+  color: var(--sidebar-muted);
+  transition: background var(--motion-fast) var(--ease-snap),
+    color var(--motion-fast) var(--ease-snap),
+    box-shadow var(--motion-fast) var(--ease-snap),
+    transform 100ms ease-out;
+}
+
+.theme-btn:hover {
+  color: var(--sidebar-text);
+}
+
+.theme-btn:active {
+  transform: scale(0.94);
+}
+
+.theme-btn.is-active {
+  color: var(--sidebar-text);
+  background: var(--surface);
+  box-shadow: var(--shadow-thumb);
+}
+
+.me {
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 16px 12px 0;
-  border-top: 1px solid var(--sidebar-line);
+  padding: 0;
 }
 
 .avatar {
@@ -376,8 +443,9 @@ const tierCounts = computed(() => {
     gap: 1px;
   }
 
-  .me {
-    padding-top: 12px;
+  .side-foot {
+    gap: 8px;
+    padding-top: 10px;
   }
 }
 </style>
