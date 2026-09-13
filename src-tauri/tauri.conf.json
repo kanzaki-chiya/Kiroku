@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost https://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'",
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost https://asset.localhost https://bgm.tv https://*.bgm.tv https://bangumi.tv https://*.bangumi.tv data: blob:; style-src 'self' 'unsafe-inline'",
       "assetProtocol": {
         "enable": true,
         "scope": ["$APPDATA/covers/**"]

@@ -138,6 +138,7 @@ struct SearchHit {
     date: Option<String>,
     score: Option<f64>,
     rank: Option<i64>,
+    rating: Option<RawRating>,
     #[serde(default)]
     tags: Vec<RawTag>,
     images: Option<RawImages>,
@@ -205,6 +206,12 @@ fn adapt_search_hit(hit: SearchHit) -> SubjectDto {
         .or(hit.image)
         .unwrap_or_default();
     let fetched = now_iso();
+    let rating = hit.rating.unwrap_or(RawRating {
+        rank: hit.rank,
+        total: None,
+        score: hit.score,
+    });
+    let votes = rating.total.unwrap_or(0);
     SubjectDto {
         id: hit.id,
         name: hit.name.clone(),
@@ -224,9 +231,9 @@ fn adapt_search_hit(hit: SearchHit) -> SubjectDto {
             .take(12)
             .collect(),
         community: CommunityDto {
-            score: normalize_score(hit.score, if hit.rank.unwrap_or(0) > 0 { 1 } else { 0 }),
-            votes: 0,
-            rank: normalize_rank(hit.rank),
+            score: normalize_score(rating.score, votes),
+            votes,
+            rank: normalize_rank(rating.rank),
             fetched_at: Some(fetched),
             status: Some("ok".into()),
         },
