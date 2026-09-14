@@ -1,6 +1,6 @@
 [package]
 name = "kiroku"
-version = "0.3.0"
+version = "0.3.1"
 description = "私人番剧评分与收藏桌面应用"
 authors = ["Kiroku"]
 edition = "2021"
