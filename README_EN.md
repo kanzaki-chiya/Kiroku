@@ -18,39 +18,55 @@
 
 In an era where modern media trackers lock user data behind commercial walled gardens, algorithm-driven rankings, and privacy risks, Kiroku embraces a strict **Local-First** philosophy:
 
-- **True Data Sovereignty**: All ratings, dimensional evaluations, personalized reviews, and custom tier classifications are stored locally in an embedded SQLite database. No tracking, no mandatory cloud accounts, and no data lock-in.
-- **Authoritative Metadata**: Seamlessly integrates with [Bangumi](https://bgm.tv/) open APIs to search, fetch, and synchronize official Chinese and Japanese titles, production studios, broadcast dates, community ratings, and high-resolution covers.
-- **Editorial Desktop Aesthetics**: Built with Tauri 2 and Vue 3, pairing modern typography and clean editorial layouts with instantaneous startup, low memory footprint, and native performance.
+- **True Data Sovereignty**: All personal ratings, dimensional evaluations, watch progress, reviews, and custom tier classifications are stored locally in an embedded SQLite database. No tracking, no mandatory cloud accounts, and no data lock-in.
+- **Authoritative Metadata**: Seamlessly integrates with [Bangumi](https://bgm.tv/) open APIs to search, fetch, and synchronize official Chinese and Japanese titles, production studios, broadcast schedules, franchise relations, community ratings, and high-resolution covers.
+- **Refined Desktop Aesthetics**: Built with Tauri 2 and Vue 3, pairing modern editorial typography, dark mode, directional page transitions, and shared element cover morphing with instantaneous startup and low resource consumption.
 
 ---
 
 ## ✨ Key Features
 
-### 🔍 Bangumi Search & Local Cover Caching
-- **Multi-Query Search**: Find anime subjects by Chinese title, Japanese original title, or Bangumi Subject ID with real-time suggestions.
+### 🔍 Bangumi Metadata Integration & Local Cover Cache
+- **Multi-Query Search**: Find anime subjects by Chinese title, Japanese original title, or Bangumi Subject ID with real-time suggestions and recent query history.
 - **Comprehensive Metadata**: Automatically sync episode counts, broadcast year, animation studio, official tags, and full storyline summaries.
-- **Local Asset Protocol**: High-resolution cover artwork is fetched and securely cached on disk via Tauri's custom asset protocol, ensuring ultra-fast image loading and full offline capability.
+- **Local Asset Protocol**: Cover artwork is fetched and cached on disk via Tauri's custom asset protocol, ensuring fast loading and full offline capability; missing artwork is automatically retrieved when refreshing metadata.
 
-### ⭐️ Granular Scoring & Deep Evaluation
-- **10-Point Score Scale**: Granular scoring from 0.0 to 10.0 for your independent overall verdict.
+### 📅 Broadcast Calendar & Weekly Schedule
+- **Weekly Broadcast Lineup**: Integrates Bangumi's live daily broadcast calendar, neatly organizing currently airing series from Monday through Sunday.
+- **Current Day Awareness**: Automatically highlights today's broadcast lineup and differentiates collected versus uncollected series. Jump directly to collected titles or add new series in a single click (prefilled with "Planned" status).
+
+### ⏱️ Watch Progress Tracking & Franchise Relations
+- **Episode Tracking**: Track viewing progress directly on anime cards and detail pages (e.g., "Watched 8 / 12 eps"). Increment progress with a single "+1 Ep" click, with automatic completion when switching status to "Completed".
+- **Franchise Network**: Inspect prequels, sequels, movies, OVAs, and side stories directly on the detail page, with smooth navigation between library entries and one-click additions for new titles.
+- **Single-Entry Removal**: Cleanly remove individual entries from your personal library without touching the rest of your collection.
+
+### ⭐️ Granular Scoring & Direct Manipulation Controls
+- **Direct Manipulation UI**: Smooth score sliders (0.0 to 10.0 scale), one-click tier selection rails, and segmented watch-status selectors replace cumbersome traditional forms.
 - **5-Star Dimensional Breakdown**: Score individual craft dimensions across **Story**, **Characters**, **Direction**, **Animation**, and **Music** with 0.5–5.0 star ratings (half-star steps), functioning as autonomous quality signals without rigid arithmetic constraints.
-- **Watch Status & In-Depth Reviews**: Organize your anime library into **Watching**, **Completed**, and **Planned** statuses, accompanied by rich personal notes of up to 5,000 characters.
+- **Lifecycle & Long-Form Notes**: Organize titles into **Watching**, **Completed**, and **Planned** statuses, accompanied by rich personal reflections and essays of up to 5,000 characters.
+
+### 📊 Taste Radar & Score Analytics
+- **5-Dimensional Taste Radar**: Generate an interactive polygon radar chart based on your craft ratings, surfacing your highest and lowest dimension averages to characterize your aesthetic preferences.
+- **Community Contrast**: Compare your average rating against the Bangumi community consensus in real time.
+- **Score Distribution Histogram**: Visualize rating patterns across the 0–10 score range to understand your grading tendencies.
+- **Taste Discrepancy Highlights**: Automatically surface anime where your evaluation deviates most from the public consensus, celebrating your hidden gems and distinctive personal taste.
 
 ### 🏷️ Customizable Tier Lists
 - **Visual Tier Hierarchy**: Categorize titles into custom tier levels (e.g., Masterpiece, Highly Recommended, Worth Watching, Dropped).
 - **Extensive Customization**: Freely customize tier titles, color palettes, badge descriptions, and drag-and-drop priority order.
-- **Multi-Criteria Filtering**: Filter and sort your collection in real time by tier, watch status, release year, score, or last updated timestamp.
+- **Quick Sidebar Access & Linked Counters**: Instant sidebar filters (including an Unassigned filter), with status tabs dynamically reflecting item counts within the selected tier.
 
-### 📊 Score Analytics & Community Taste Comparison
-- **Community Contrast**: Compare your average rating against the Bangumi community consensus in real time.
-- **Score Distribution Histogram**: Visualize rating patterns and distribution across the 0–10 score range.
-- **Taste Discrepancy Highlights**: Automatically surface anime where your evaluation deviates most from the public consensus, celebrating your hidden gems and distinctive personal taste.
+### 🎨 Fluid Motion, Dark Mode & Frameless Window
+- **Theme Modes**: Comprehensive support for Light, Dark, and System-following themes with instant switching from the sidebar or settings view.
+- **Frameless Window Experience**: Sleek custom title bar with native window controls (minimize, maximize, close) and draggable title region, retaining window dimensions and position via `tauri-plugin-window-state`.
+- **Fluid Motion System**: Depth-aware directional routing transitions, shared element cover morphing between library cards and detail views, smooth FLIP reordering for lists, and graceful toast dismissals.
 
-### 🔒 Data Sovereignty, Portability & Backups
-- **Standard JSON Backups**: One-click export of personal records, subject snapshots, and tier definitions into portable JSON format.
-- **Smart Import Preview**: Inspect additions, duplicates, and conflicts prior to importing, with flexible overwrite or skip policies and seamless dimension migration.
-- **Physical SQLite Snapshots**: Export raw, timestamped SQLite database files (`.db`) directly for cold storage and easy multi-device archiving.
+### 🔒 Data Sovereignty, Portability & In-App Updates
+- **Standard JSON Backups**: One-click export of personal records, subject snapshots, and tier definitions into portable JSON format with smart import preview and conflict resolution.
+- **Physical SQLite Snapshots**: Export raw, timestamped SQLite database files (`.db`) directly for cold storage and archival.
 - **Decoupled Cache Management**: Clear local cover caches anytime to free up disk space without affecting your ratings or notes; complete data reset is also supported.
+- **In-App Auto Updates**: Integrated `tauri-plugin-updater` checks GitHub Releases on launch, allowing one-click download and seamless upgrade.
+- **Branded Windows Installer**: Customized NSIS installer visuals for a polished setup experience.
 
 ---
 
@@ -58,9 +74,13 @@ In an era where modern media trackers lock user data behind commercial walled ga
 
 - **Frontend**: Vue 3 (Composition API with `<script setup>`), TypeScript, Vite, Pinia, Vue Router
 - **Desktop Framework**: Tauri 2 (Rust)
-- **Embedded Database**: SQLite (via `rusqlite` with Write-Ahead Logging / WAL mode enabled for robust concurrency)
+- **Embedded Database**: SQLite (via `rusqlite` with Write-Ahead Logging / WAL mode enabled)
+- **Official Plugins**:
+  - `tauri-plugin-updater`: In-app update checks and seamless installation
+  - `tauri-plugin-window-state`: Window size, position, and maximization persistence
+  - `tauri-plugin-process`: Graceful app reboot and process handling
 - **Networking**: Reqwest (native asynchronous requests with rustls & gzip support)
-- **UI & Icons**: Lucide Vue Next, modern CSS custom properties (tokens), and fluid responsive layout
+- **UI & Motion**: Lucide Vue Next, modern CSS design tokens, FLIP layout animations, and shared element transitions
 
 ---
 
@@ -70,7 +90,7 @@ In an era where modern media trackers lock user data behind commercial walled ga
 
 Ensure the following tools are installed in your development environment:
 
-1. **Node.js**: `>= 18.0.0`
+1. **Node.js**: `^20.19.0 || >=22.12.0`
 2. **Package Manager**: `npm` or `pnpm`
 3. **Rust Toolchain** (required for desktop compilation): `rustc` and `cargo` ([Rust Installation Guide](https://www.rust-lang.org/tools/install))
 4. **C++ Build Environment** (Windows): Visual Studio C++ Build Tools or Visual Studio with "Desktop development with C++" workload
@@ -78,7 +98,7 @@ Ensure the following tools are installed in your development environment:
 ### Installation
 
 ```bash
-git clone https://github.com/kanzakichiya/Kiroku.git
+git clone https://github.com/kanzaki-chiya/Kiroku.git
 cd Kiroku
 npm install
 ```
@@ -111,7 +131,7 @@ npm run desktop
 
 ### 3. Production Desktop Build
 
-Compile the native desktop installer for your operating system (generates an NSIS `.exe` installer on Windows):
+Compile the native desktop installer for your operating system (generates a customized NSIS `.exe` installer on Windows):
 
 ```bash
 npm run desktop:build
