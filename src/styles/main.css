@@ -237,11 +237,11 @@ button:disabled {
 /* ---- route transitions ---- */
 
 .route-forward-enter-active {
-  transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out);
+  transition: opacity 320ms var(--ease-out), transform 320ms var(--ease-out);
 }
 
 .route-forward-leave-active {
-  transition: opacity 140ms ease-out;
+  transition: opacity 160ms ease-out;
 }
 
 .route-forward-enter-from {
@@ -254,11 +254,11 @@ button:disabled {
 }
 
 .route-back-enter-active {
-  transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out);
+  transition: opacity 320ms var(--ease-out), transform 320ms var(--ease-out);
 }
 
 .route-back-leave-active {
-  transition: opacity 140ms ease-out;
+  transition: opacity 160ms ease-out;
 }
 
 .route-back-enter-from {
@@ -271,11 +271,11 @@ button:disabled {
 }
 
 .route-fade-enter-active {
-  transition: opacity 220ms ease-out;
+  transition: opacity 260ms ease-out;
 }
 
 .route-fade-leave-active {
-  transition: opacity 130ms ease-out;
+  transition: opacity 160ms ease-out;
 }
 
 .route-fade-enter-from,
@@ -286,11 +286,11 @@ button:disabled {
 /* ---- in-page pane swaps ---- */
 
 .swap-enter-active {
-  transition: opacity 220ms var(--ease-snap), transform 220ms var(--ease-snap);
+  transition: opacity 260ms var(--ease-snap), transform 260ms var(--ease-snap);
 }
 
 .swap-leave-active {
-  transition: opacity 140ms ease-out;
+  transition: opacity 170ms ease-out;
 }
 
 .swap-enter-from {

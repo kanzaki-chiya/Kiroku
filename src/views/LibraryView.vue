@@ -178,26 +178,26 @@ function resetAll() {
 }
 
 .shelf-move {
-  transition: transform 360ms var(--ease-spring);
+  transition: transform 380ms var(--ease-spring);
 }
 
 .shelf-enter-active {
-  transition: opacity 240ms var(--ease-snap), transform 240ms var(--ease-snap);
+  transition: opacity 300ms var(--ease-snap), transform 300ms var(--ease-snap);
 }
 
 .shelf-leave-active {
-  transition: opacity 150ms ease-out, transform 150ms ease-out;
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
   position: absolute;
 }
 
 .shelf-enter-from,
 .shelf-leave-to {
   opacity: 0;
-  transform: scale(0.94);
+  transform: scale(0.96);
 }
 
 .shelf-appear-active {
-  transition: opacity 320ms var(--ease-snap), transform 320ms var(--ease-snap);
+  transition: opacity 340ms var(--ease-snap), transform 340ms var(--ease-snap);
   transition-delay: min(360ms, calc(var(--i, 0) * 24ms));
 }
 

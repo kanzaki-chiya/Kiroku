@@ -35,7 +35,7 @@ router.beforeEach((to, from) => {
     <AppShell>
       <RouterView v-slot="{ Component }">
         <Transition :name="routeTransition" mode="out-in" appear>
-          <component :is="Component" :key="route.fullPath" />
+          <component :is="Component" :key="route.path" />
         </Transition>
       </RouterView>
     </AppShell>

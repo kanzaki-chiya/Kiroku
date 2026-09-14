@@ -1,3 +1,7 @@
+<script lang="ts">
+const loadedCoverUrls = new Set<string>()
+</script>
+
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { BangumiSubject } from '../types/anime'
@@ -7,16 +11,21 @@ const props = defineProps<{
 }>()
 
 const failed = ref(false)
-const loaded = ref(false)
+const loaded = ref(!!props.subject.coverUrl && loadedCoverUrls.has(props.subject.coverUrl))
 const initial = computed(
   () => props.subject.nameCn.trim().charAt(0) || props.subject.name.trim().charAt(0) || '?'
 )
 
+function onImgLoad() {
+  loaded.value = true
+  if (props.subject.coverUrl) loadedCoverUrls.add(props.subject.coverUrl)
+}
+
 watch(
   () => props.subject.coverUrl,
-  () => {
+  url => {
     failed.value = false
-    loaded.value = false
+    loaded.value = !!url && loadedCoverUrls.has(url)
   }
 )
 </script>
@@ -32,7 +41,7 @@ watch(
       height="300"
       loading="lazy"
       :class="{ 'is-loaded': loaded }"
-      @load="loaded = true"
+      @load="onImgLoad"
       @error="failed = true"
     />
     <div v-else class="cover-fallback" aria-hidden="true">
