@@ -1,4 +1,4 @@
-# Kiroku · 记录
+# Kiroku
 
 > A minimalist, local-first desktop application for anime rating and collection management. Seamlessly integrated with Bangumi, crafted to keep your personal anime memories truly yours.
 
