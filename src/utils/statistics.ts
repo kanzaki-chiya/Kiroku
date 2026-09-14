@@ -1,4 +1,4 @@
-import type { LibraryEntry } from '../types/anime'
+import { dimensionKeys, type DimensionKey, type LibraryEntry } from '../types/anime'
 
 export interface StatisticsBin {
   label: string
@@ -12,6 +12,12 @@ export interface StatisticsDifference {
   delta: number
 }
 
+export interface StatisticsDimension {
+  key: DimensionKey
+  mean: number | null
+  count: number
+}
+
 export interface LibraryStatistics {
   total: number
   ratedCount: number
@@ -23,6 +29,7 @@ export interface LibraryStatistics {
   highest: LibraryEntry | null
   differences: StatisticsDifference[]
   bins: StatisticsBin[]
+  dimensions: StatisticsDimension[]
 }
 
 const mean = (values: number[]) =>
@@ -53,6 +60,12 @@ export function calculateStatistics(entries: LibraryEntry[]): LibraryStatistics 
     [...rated].sort(
       (a, b) => b.personal.score! - a.personal.score! || a.subject.id - b.subject.id
     )[0] ?? null
+  const dimensions = dimensionKeys.map(key => {
+    const values = entries
+      .map(entry => entry.personal.dimensions[key])
+      .filter((value): value is number => value !== null)
+    return { key, mean: mean(values), count: values.length }
+  })
   return {
     total: entries.length,
     ratedCount: rated.length,
@@ -63,6 +76,7 @@ export function calculateStatistics(entries: LibraryEntry[]): LibraryStatistics 
     meanDifference: mean(differences.map(d => d.delta)),
     highest,
     differences,
-    bins
+    bins,
+    dimensions
   }
 }

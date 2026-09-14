@@ -2,6 +2,7 @@
 import { computed, nextTick, shallowRef, ref, watch, type Ref } from 'vue'
 import { Crown, RotateCcw } from 'lucide-vue-next'
 import { useLibraryStore } from '../stores/library'
+import TasteProfile from '../components/TasteProfile.vue'
 import { formatDelta, formatScore } from '../utils/format'
 import type { LibraryStatistics } from '../utils/statistics'
 
@@ -129,6 +130,8 @@ const maxBin = computed(() => Math.max(1, ...(stats.value?.bins.map(b => b.count
       </ul>
     </section>
 
+    <TasteProfile :dimensions="stats.dimensions" :ready="barsReady || reducedMotion" />
+
     <div class="two-col">
       <section class="panel">
         <h2 class="panel-title">与社区分歧最大</h2>
@@ -167,7 +170,7 @@ const maxBin = computed(() => Math.max(1, ...(stats.value?.bins.map(b => b.count
       统计范围：当前番剧库全部 {{ stats.total }} 部。我的均分 = 所有已打总分作品（{{ stats.ratedCount }}
       部）的平均；Bangumi 社区均分 = 有社区评分的 {{ stats.communityCount }} 部的平均（Mock
       快照，未按票数加权）；平均差值 = 两者皆有评分的 {{ stats.pairedCount }} 部中「我的 −
-      Bangumi 社区」的均值，正数代表我更喜欢。分项评分不参与总分计算。
+      Bangumi 社区」的均值，正数代表我更喜欢。口味画像按各维已评作品独立计算均分（0–5 星），未评不计入样本；不要求已打总分，不区分观看状态。分项仅用于画像，总分仍由你独立填写。
     </p>
     </template>
     <div v-else-if="statsError" class="state-line error" role="alert">

@@ -1,4 +1,6 @@
-use crate::models::{LibraryEntryDto, StatBinDto, StatDifferenceDto, StatisticsDto};
+use crate::models::{
+    LibraryEntryDto, StatBinDto, StatDifferenceDto, StatDimensionDto, StatisticsDto,
+};
 
 fn mean(values: &[f64]) -> Option<f64> {
     if values.is_empty() {
@@ -70,6 +72,21 @@ pub fn calculate_statistics(entries: &[LibraryEntryDto]) -> StatisticsDto {
         }
         a.subject.id.cmp(&b.subject.id)
     });
+    let dimensions = ["story", "characters", "direction", "animation", "music"]
+        .into_iter()
+        .enumerate()
+        .map(|(index, key)| {
+            let values: Vec<f64> = entries
+                .iter()
+                .filter_map(|entry| entry.personal.dimensions.values()[index].1)
+                .collect();
+            StatDimensionDto {
+                key: key.into(),
+                mean: mean(&values),
+                count: values.len() as i64,
+            }
+        })
+        .collect();
     StatisticsDto {
         total: entries.len() as i64,
         rated_count: rated.len() as i64,
@@ -91,6 +108,7 @@ pub fn calculate_statistics(entries: &[LibraryEntryDto]) -> StatisticsDto {
         highest: highest_list.first().cloned().cloned(),
         differences,
         bins,
+        dimensions,
     }
 }
 
@@ -239,7 +257,30 @@ mod tests {
 
     #[test]
     fn matches_frontend_fixture() {
-        let entries = vec![entry(1, Some(8.0), Some(7.0)), entry(2, Some(6.0), Some(8.0)), entry(3, None, Some(9.0))];
+        let mut entries = vec![entry(1, Some(8.0), Some(7.0)), entry(2, Some(6.0), Some(8.0)), entry(3, None, Some(9.0))];
+        entries[0].personal.dimensions = DimensionsDto {
+            story: Some(4.0),
+            characters: Some(0.0),
+            direction: None,
+            animation: Some(5.0),
+            music: None,
+        };
+        entries[1].personal.dimensions = DimensionsDto {
+            story: None,
+            characters: Some(4.0),
+            direction: None,
+            animation: Some(4.0),
+            music: None,
+        };
+        entries[1].personal.status = "watching".into();
+        entries[2].personal.dimensions = DimensionsDto {
+            story: Some(3.0),
+            characters: None,
+            direction: None,
+            animation: Some(4.5),
+            music: Some(0.5),
+        };
+        entries[2].personal.status = "planned".into();
         let stats = calculate_statistics(&entries);
         assert_eq!(stats.total, 3);
         assert_eq!(stats.rated_count, 2);
@@ -251,6 +292,62 @@ mod tests {
         assert_eq!(stats.highest.as_ref().unwrap().personal.score, Some(8.0));
         assert_eq!(stats.differences.iter().map(|d| d.delta).collect::<Vec<_>>(), vec![-2.0, 1.0]);
         assert_eq!(stats.bins.iter().map(|b| b.count).collect::<Vec<_>>(), vec![0, 1, 0, 1, 0]);
+        assert_eq!(serde_json::to_value(&stats).unwrap()["dimensions"], serde_json::json!([
+            {"key":"story","mean":3.5,"count":2},
+            {"key":"characters","mean":2.0,"count":2},
+            {"key":"direction","mean":null,"count":0},
+            {"key":"animation","mean":4.5,"count":3},
+            {"key":"music","mean":0.5,"count":1}
+        ]));
+    }
+
+    #[test]
+    fn empty_dimensions_keep_fixed_order() {
+        for entries in [vec![], vec![entry(1, Some(8.0), Some(7.0))]] {
+            let stats = calculate_statistics(&entries);
+            assert_eq!(
+                stats
+                    .dimensions
+                    .iter()
+                    .map(|d| (d.key.as_str(), d.mean, d.count))
+                    .collect::<Vec<_>>(),
+                vec![
+                    ("story", None, 0),
+                    ("characters", None, 0),
+                    ("direction", None, 0),
+                    ("animation", None, 0),
+                    ("music", None, 0)
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn dimension_boundary_scores_without_total() {
+        let mut entries = vec![entry(1, None, None), entry(2, None, None)];
+        entries[0].personal.dimensions = DimensionsDto {
+            story: Some(0.0),
+            characters: Some(0.5),
+            direction: None,
+            animation: Some(5.0),
+            music: None,
+        };
+        entries[1].personal.dimensions = DimensionsDto {
+            story: None,
+            characters: Some(1.0),
+            direction: None,
+            animation: None,
+            music: None,
+        };
+        let stats = calculate_statistics(&entries);
+        assert_eq!(serde_json::to_value(&stats).unwrap()["dimensions"], serde_json::json!([
+            {"key":"story","mean":0.0,"count":1},
+            {"key":"characters","mean":0.75,"count":2},
+            {"key":"direction","mean":null,"count":0},
+            {"key":"animation","mean":5.0,"count":1},
+            {"key":"music","mean":null,"count":0}
+        ]));
+        assert_eq!(stats.rated_count, 0);
     }
 
     #[test]

@@ -217,6 +217,14 @@ pub struct StatBinDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct StatDimensionDto {
+    pub key: String,
+    pub mean: Option<f64>,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StatDifferenceDto {
     pub delta: f64,
     pub entry: LibraryEntryDto,
@@ -235,6 +243,7 @@ pub struct StatisticsDto {
     pub highest: Option<LibraryEntryDto>,
     pub differences: Vec<StatDifferenceDto>,
     pub bins: Vec<StatBinDto>,
+    pub dimensions: Vec<StatDimensionDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
