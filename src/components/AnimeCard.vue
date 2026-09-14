@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Star } from 'lucide-vue-next'
 import { canMorph, morphCardId, runMorphNav } from '../services/motion'
+import { isTauri } from '../runtime'
 import { useLibraryStore } from '../stores/library'
 import type { LibraryEntry } from '../types/anime'
 import { formatLabels, formatScore, resolveTier, statusLabels, tierBadgeStyle } from '../utils/format'
@@ -15,6 +16,7 @@ const props = defineProps<{
 
 const store = useLibraryStore()
 const router = useRouter()
+const desktop = isTauri()
 const tierStyle = computed(() =>
   tierBadgeStyle(resolveTier(props.entry.personal.tier, store.tiers)?.color)
 )
@@ -83,7 +85,7 @@ function open(event: MouseEvent) {
           <span class="rating-label">我的</span>
           <span class="personal-number">{{ formatScore(entry.personal.score) }}</span>
         </span>
-        <span class="rating bgm" :title="`Bangumi 社区评分（Mock）${formatScore(entry.subject.community.score)}`">
+        <span class="rating bgm" :title="`Bangumi 社区评分${desktop ? '' : '（Mock）'} ${formatScore(entry.subject.community.score)}`">
           <span class="rating-label">社区</span>
           {{ formatScore(entry.subject.community.score) }}
         </span>

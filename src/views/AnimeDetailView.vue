@@ -3,6 +3,7 @@ import { computed, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Ghost, Pencil, Plus, RotateCcw, Star, Trash2 } from 'lucide-vue-next'
 import { bangumiApi } from '../api/bangumi'
+import { isTauri } from '../runtime'
 import AnimeCover from '../components/AnimeCover.vue'
 import ScoreComparison from '../components/ScoreComparison.vue'
 import { canMorph, morphCardId, runMorphNav } from '../services/motion'
@@ -14,6 +15,7 @@ import { dimensionBand, dimensionLabels, formatLabels, formatScore, resolveTier,
 
 const route = useRoute()
 const router = useRouter()
+const desktop = isTauri()
 const store = useLibraryStore()
 const { push } = useNotices()
 const refreshing = shallowRef(false)
@@ -258,7 +260,7 @@ function goBack(event: MouseEvent) {
         <p class="synopsis">{{ entry.subject.summary }}</p>
 
         <div class="community-line">
-          <span>Bangumi 社区评分（Mock）：{{ formatScore(entry.subject.community.score) }}</span>
+          <span>Bangumi 社区评分{{ desktop ? '' : '（Mock）' }}：{{ formatScore(entry.subject.community.score) }}</span>
           <span>· {{ entry.subject.community.votes.toLocaleString() }} 人评价</span>
           <span v-if="entry.subject.community.rank !== null">
             · 站内排名 #{{ entry.subject.community.rank }}

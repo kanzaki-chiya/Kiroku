@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Star } from 'lucide-vue-next'
+import { isTauri } from '../runtime'
 import { formatDelta, formatScore } from '../utils/format'
+
+const desktop = isTauri()
 
 const props = defineProps<{
   personal: number | null
@@ -28,7 +31,7 @@ const deltaText = computed(() => {
       <span class="score-value">{{ formatScore(personal) }}</span>
     </div>
     <div class="score community">
-      <span class="score-label">Bangumi 社区<span class="mock">Mock</span></span>
+      <span class="score-label">Bangumi 社区<span v-if="!desktop" class="mock">Mock</span></span>
       <span class="score-value">{{ formatScore(community) }}</span>
     </div>
     <p v-if="deltaText" class="delta" :class="{ positive: delta! > 0, negative: delta! < 0 }">
