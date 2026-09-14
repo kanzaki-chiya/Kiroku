@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { LibraryEntry } from '../types/anime'
 import { formatLabels, statusLabels } from '../utils/format'
 
@@ -9,6 +9,14 @@ const props = defineProps<{
 
 const excerpt = computed(
   () => props.entry.personal.review.trim() || props.entry.subject.summary
+)
+
+const imgLoaded = ref(false)
+watch(
+  () => props.entry.subject.coverUrl,
+  () => {
+    imgLoaded.value = false
+  }
 )
 </script>
 
@@ -25,7 +33,7 @@ const excerpt = computed(
       <span class="featured-link">查看详情 ›</span>
     </div>
     <div class="featured-art" aria-hidden="true">
-      <img :src="entry.subject.coverUrl" :alt="''" />
+      <img :src="entry.subject.coverUrl" :alt="''" :class="{ 'is-loaded': imgLoaded }" @load="imgLoaded = true" />
     </div>
   </RouterLink>
 </template>
@@ -137,7 +145,13 @@ const excerpt = computed(
   object-fit: cover;
   object-position: center 28%;
   display: block;
-  transition: transform 500ms var(--ease-spring);
+  opacity: 0;
+  transition: opacity var(--motion-med) var(--ease-snap),
+    transform 500ms var(--ease-spring);
+}
+
+.featured-art img.is-loaded {
+  opacity: 1;
 }
 
 .featured:hover .featured-art img {

@@ -1,11 +1,28 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
 import AppShell from './components/AppShell.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
+import { vtBusy } from './services/motion'
 import { useLibraryStore } from './stores/library'
 import { useNotices } from './stores/notices'
 
 const { notices } = useNotices()
 const library = useLibraryStore()
+const route = useRoute()
+const router = useRouter()
+const routeTransition = ref('route-fade')
+
+router.beforeEach((to, from) => {
+  if (vtBusy.value) {
+    routeTransition.value = 'route-none'
+    return
+  }
+  const toDepth = (to.meta.depth as number | undefined) ?? 0
+  const fromDepth = (from.meta.depth as number | undefined) ?? 0
+  routeTransition.value =
+    toDepth > fromDepth ? 'route-forward' : toDepth < fromDepth ? 'route-back' : 'route-fade'
+})
 </script>
 
 <template>
@@ -16,12 +33,16 @@ const library = useLibraryStore()
   </div>
   <template v-else>
     <AppShell>
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <Transition :name="routeTransition" mode="out-in" appear>
+          <component :is="Component" :key="route.fullPath" />
+        </Transition>
+      </RouterView>
     </AppShell>
     <UpdateBanner />
-    <div class="notices" role="status" aria-live="polite">
+    <TransitionGroup name="notice" tag="div" class="notices" role="status" aria-live="polite">
       <div v-for="notice in notices" :key="notice.id" class="notice">{{ notice.text }}</div>
-    </div>
+    </TransitionGroup>
   </template>
 </template>
 
@@ -48,19 +69,28 @@ const library = useLibraryStore()
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lift);
   overflow-wrap: anywhere;
-  animation: notice-in 300ms var(--ease-spring);
 }
 
-@keyframes notice-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.96);
-  }
+.notice-move,
+.notice-enter-active,
+.notice-leave-active {
+  transition: opacity 260ms var(--ease-spring), transform 260ms var(--ease-spring);
+}
 
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+.notice-enter-from {
+  opacity: 0;
+  transform: translateY(10px) scale(0.96);
+}
+
+.notice-leave-to {
+  opacity: 0;
+  transform: translateY(6px) scale(0.97);
+}
+
+.notice-leave-active {
+  position: absolute;
+  right: 0;
+  width: 100%;
 }
 
 .boot-fail {

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { Star } from 'lucide-vue-next'
+import { canMorph, morphCardId, runMorphNav } from '../services/motion'
 import { useLibraryStore } from '../stores/library'
 import type { LibraryEntry } from '../types/anime'
 import { formatLabels, formatScore, resolveTier, statusLabels, tierBadgeStyle } from '../utils/format'
@@ -12,9 +14,24 @@ const props = defineProps<{
 }>()
 
 const store = useLibraryStore()
+const router = useRouter()
 const tierStyle = computed(() =>
   tierBadgeStyle(resolveTier(props.entry.personal.tier, store.tiers)?.color)
 )
+const isMorph = computed(() => morphCardId.value === props.entry.subject.id)
+
+function open(event: MouseEvent) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  if (!canMorph()) return
+  event.preventDefault()
+  const cover = (event.currentTarget as HTMLElement).querySelector('.cover')
+  cover?.classList.add('vt-source')
+  morphCardId.value = props.entry.subject.id
+  runMorphNav(router, `/anime/${props.entry.subject.id}`, () => {
+    cover?.classList.remove('vt-source')
+    morphCardId.value = null
+  })
+}
 </script>
 
 <template>
@@ -23,9 +40,10 @@ const tierStyle = computed(() =>
     class="card"
     :class="`is-${layout}`"
     :aria-label="`${entry.subject.nameCn}，${entry.subject.year} 年，我的评分 ${formatScore(entry.personal.score)}`"
+    @click="open"
   >
     <div class="cover-wrap">
-      <AnimeCover :subject="entry.subject" />
+      <AnimeCover :subject="entry.subject" :class="{ 'vt-source': isMorph }" />
       <span class="tier-badge card-tier" :class="{ 'tier-none': !entry.personal.tier }" :style="tierStyle">
         {{ entry.personal.tier ?? '—' }}
       </span>

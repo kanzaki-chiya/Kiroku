@@ -152,7 +152,8 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="subject-search">
-    <template v-if="!selected">
+    <Transition name="swap" mode="out-in">
+    <div v-if="!selected" key="search" class="search-pane">
       <label class="search-box">
         <Search :size="16" class="search-icon" aria-hidden="true" />
         <input
@@ -255,10 +256,9 @@ onBeforeUnmount(() => {
           </template>
         </template>
       </div>
-    </template>
+    </div>
 
-    <template v-else>
-      <div class="chosen">
+    <div v-else key="form" class="chosen">
         <div class="chosen-head">
           <span class="thumb"><AnimeCover :subject="selected" /></span>
           <div class="chosen-text">
@@ -281,13 +281,19 @@ onBeforeUnmount(() => {
           @cancel="onFormCancel"
           @dirty-change="onDirty"
         />
-      </div>
-    </template>
+    </div>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
 .subject-search {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.search-pane {
   display: flex;
   flex-direction: column;
   gap: 18px;

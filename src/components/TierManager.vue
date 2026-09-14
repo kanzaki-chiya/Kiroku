@@ -102,7 +102,7 @@ async function onDelete(id: number) {
       <span v-if="!store.desktop">浏览器演示只改本次内存，刷新后恢复。</span>
     </p>
 
-    <ul class="tier-list">
+    <TransitionGroup name="tier" tag="ul" class="tier-list">
       <li v-for="(row, index) in rows" :key="row.id" class="tier-row">
         <span class="tier-badge" :style="tierBadgeStyle(row.color)">{{ row.name }}</span>
         <input v-model="row.name" class="field" aria-label="分档名称" />
@@ -134,7 +134,7 @@ async function onDelete(id: number) {
           <Trash2 :size="14" />
         </button>
       </li>
-    </ul>
+    </TransitionGroup>
 
     <form class="create-row" @submit.prevent="onCreate">
       <Plus :size="14" aria-hidden="true" />
@@ -184,6 +184,26 @@ async function onDelete(id: number) {
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
   min-width: 0;
+}
+
+.tier-move {
+  transition: transform 300ms var(--ease-spring);
+}
+
+.tier-enter-active {
+  transition: opacity 240ms var(--ease-snap), transform 240ms var(--ease-snap);
+}
+
+.tier-leave-active {
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+  position: absolute;
+  width: 100%;
+}
+
+.tier-enter-from,
+.tier-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .create-row {

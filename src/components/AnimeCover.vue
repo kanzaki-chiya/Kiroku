@@ -7,6 +7,7 @@ const props = defineProps<{
 }>()
 
 const failed = ref(false)
+const loaded = ref(false)
 const initial = computed(
   () => props.subject.nameCn.trim().charAt(0) || props.subject.name.trim().charAt(0) || '?'
 )
@@ -15,6 +16,7 @@ watch(
   () => props.subject.coverUrl,
   () => {
     failed.value = false
+    loaded.value = false
   }
 )
 </script>
@@ -29,6 +31,8 @@ watch(
       width="200"
       height="300"
       loading="lazy"
+      :class="{ 'is-loaded': loaded }"
+      @load="loaded = true"
       @error="failed = true"
     />
     <div v-else class="cover-fallback" aria-hidden="true">
@@ -55,6 +59,15 @@ watch(
   height: 100%;
   object-fit: cover;
   border-radius: inherit;
+  opacity: 0;
+  transform: scale(1.015);
+  transition: opacity var(--motion-med) var(--ease-snap),
+    transform 380ms var(--ease-snap);
+}
+
+.cover-img.is-loaded {
+  opacity: 1;
+  transform: none;
 }
 
 .cover-fallback {

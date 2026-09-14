@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue'
+import { computed, nextTick, shallowRef, ref, watch, type Ref } from 'vue'
 import { Crown, RotateCcw } from 'lucide-vue-next'
 import { useLibraryStore } from '../stores/library'
 import { formatDelta, formatScore } from '../utils/format'
@@ -8,6 +8,44 @@ import type { LibraryStatistics } from '../utils/statistics'
 const store = useLibraryStore()
 const stats = shallowRef<LibraryStatistics | null>(null)
 const statsError = shallowRef('')
+const barsReady = ref(false)
+
+const reducedMotion =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+function useCountUp(source: () => number | null, round = false): Readonly<Ref<number>> {
+  const shown = ref(0)
+  let raf = 0
+  watch(
+    source,
+    target => {
+      cancelAnimationFrame(raf)
+      if (target === null || reducedMotion) {
+        shown.value = target ?? 0
+        return
+      }
+      const from = shown.value
+      const started = performance.now()
+      const tick = (now: number) => {
+        const p = Math.min(1, (now - started) / 650)
+        const ease = 1 - Math.pow(1 - p, 3)
+        shown.value = from + (target - from) * ease
+        if (p < 1) raf = requestAnimationFrame(tick)
+      }
+      raf = requestAnimationFrame(tick)
+    },
+    { immediate: true }
+  )
+  return round ? computed(() => Math.round(shown.value)) : shown
+}
+
+const totalCount = useCountUp(() => stats.value?.total ?? null, true)
+const ratedCount = useCountUp(() => stats.value?.ratedCount ?? null, true)
+const myMean = useCountUp(() => stats.value?.personalMean ?? null)
+const communityMean = useCountUp(() => stats.value?.communityMean ?? null)
+const meanDiff = useCountUp(() => stats.value?.meanDifference ?? null)
+const highestScore = useCountUp(() => stats.value?.highest?.personal.score ?? null)
 
 async function load() {
   try {
@@ -21,11 +59,22 @@ async function load() {
 
 watch(() => store.count, () => { void load() }, { immediate: true })
 
-const maxBin = computed(() => Math.max(1, ...(stats.value?.bins.map(b => b.count) ?? [0])))
+watch(
+  () => stats.value,
+  value => {
+    barsReady.value = false
+    if (!value) return
+    nextTick(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          barsReady.value = true
+        })
+      })
+    })
+  }
+)
 
-function fmt(value: number | null): string {
-  return value === null ? '—' : value.toFixed(1)
-}
+const maxBin = computed(() => Math.max(1, ...(stats.value?.bins.map(b => b.count) ?? [0])))
 </script>
 
 <template>
@@ -45,24 +94,24 @@ function fmt(value: number | null): string {
     <div class="stat-cards">
       <div class="stat">
         <span class="stat-label">收录总数</span>
-        <span class="stat-value">{{ stats.total }}</span>
+        <span class="stat-value">{{ totalCount }}</span>
       </div>
       <div class="stat">
         <span class="stat-label">已评分</span>
-        <span class="stat-value">{{ stats.ratedCount }}</span>
+        <span class="stat-value">{{ ratedCount }}</span>
       </div>
       <div class="stat">
         <span class="stat-label">我的均分</span>
-        <span class="stat-value mine">{{ fmt(stats.personalMean) }}</span>
+        <span class="stat-value mine">{{ stats.personalMean === null ? '—' : myMean.toFixed(1) }}</span>
       </div>
       <div class="stat">
         <span class="stat-label">Bangumi 均分<span class="mock">Mock</span></span>
-        <span class="stat-value community">{{ fmt(stats.communityMean) }}</span>
+        <span class="stat-value community">{{ stats.communityMean === null ? '—' : communityMean.toFixed(1) }}</span>
       </div>
       <div class="stat">
         <span class="stat-label">平均差值</span>
         <span class="stat-value" :class="{ mine: (stats.meanDifference ?? 0) > 0, community: (stats.meanDifference ?? 0) < 0 }">
-          {{ stats.meanDifference === null ? '—' : formatDelta(stats.meanDifference) }}
+          {{ stats.meanDifference === null ? '—' : formatDelta(meanDiff) }}
         </span>
       </div>
     </div>
@@ -73,7 +122,7 @@ function fmt(value: number | null): string {
         <li v-for="bin in stats.bins" :key="bin.label" class="bin-row">
           <span class="bin-label">{{ bin.label }}</span>
           <div class="bin-track" role="img" :aria-label="`${bin.label} 分区间：${bin.count} 部`">
-            <div class="bin-fill" :style="{ width: `${(bin.count / maxBin) * 100}%` }"></div>
+            <div class="bin-fill" :style="{ width: barsReady ? `${(bin.count / maxBin) * 100}%` : '0%' }"></div>
           </div>
           <span class="bin-count">{{ bin.count }} 部</span>
         </li>
@@ -109,7 +158,7 @@ function fmt(value: number | null): string {
             <span class="highest-name">{{ stats.highest.subject.nameCn }}</span>
             <span class="highest-sub">{{ stats.highest.subject.name }}</span>
           </span>
-          <span class="highest-score">{{ formatScore(stats.highest.personal.score) }}</span>
+          <span class="highest-score">{{ formatScore(highestScore) }}</span>
         </RouterLink>
       </section>
     </div>

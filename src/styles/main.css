@@ -51,8 +51,11 @@
   --font-number: var(--font-body);
   --page-gutter: 40px;
   --motion-fast: 160ms;
+  --motion-med: 260ms;
+  --motion-slow: 400ms;
   --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-snap: cubic-bezier(0.2, 0.9, 0.25, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 * {
@@ -229,19 +232,85 @@ button:disabled {
   padding: 32px var(--page-gutter) 40px;
   max-width: 1480px;
   margin: 0 auto;
-  animation: page-in 260ms var(--ease-spring);
 }
 
-@keyframes page-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
+/* ---- route transitions ---- */
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.route-forward-enter-active {
+  transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out);
+}
+
+.route-forward-leave-active {
+  transition: opacity 140ms ease-out;
+}
+
+.route-forward-enter-from {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.route-forward-leave-to {
+  opacity: 0;
+}
+
+.route-back-enter-active {
+  transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out);
+}
+
+.route-back-leave-active {
+  transition: opacity 140ms ease-out;
+}
+
+.route-back-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.route-back-leave-to {
+  opacity: 0;
+}
+
+.route-fade-enter-active {
+  transition: opacity 220ms ease-out;
+}
+
+.route-fade-leave-active {
+  transition: opacity 130ms ease-out;
+}
+
+.route-fade-enter-from,
+.route-fade-leave-to {
+  opacity: 0;
+}
+
+/* ---- in-page pane swaps ---- */
+
+.swap-enter-active {
+  transition: opacity 220ms var(--ease-snap), transform 220ms var(--ease-snap);
+}
+
+.swap-leave-active {
+  transition: opacity 140ms ease-out;
+}
+
+.swap-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.swap-leave-to {
+  opacity: 0;
+}
+
+/* ---- shared element (cover morph) ---- */
+
+.vt-source {
+  view-transition-name: cover-morph;
+}
+
+::view-transition-group(cover-morph) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .breadcrumb {
@@ -285,6 +354,12 @@ button:disabled {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
 

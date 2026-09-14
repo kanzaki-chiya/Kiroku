@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Ghost, Pencil, RotateCcw, Star } from 'lucide-vue-next'
 import AnimeCover from '../components/AnimeCover.vue'
 import ScoreComparison from '../components/ScoreComparison.vue'
+import { canMorph, morphCardId, runMorphNav } from '../services/motion'
 import { useLibraryStore } from '../stores/library'
 import { useNotices } from '../stores/notices'
 import { dimensionKeys } from '../types/anime'
 import { dimensionBand, dimensionLabels, formatLabels, formatScore, resolveTier, starFill, statusLabels, tierBadgeStyle, tierDescription } from '../utils/format'
 
 const route = useRoute()
+const router = useRouter()
 const store = useLibraryStore()
 const { push } = useNotices()
 const refreshing = shallowRef(false)
@@ -40,12 +42,22 @@ async function refreshMetadata() {
     refreshing.value = false
   }
 }
+
+function goBack(event: MouseEvent) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  if (!canMorph() || !entry.value) return
+  event.preventDefault()
+  morphCardId.value = entry.value.subject.id
+  runMorphNav(router, '/library', () => {
+    morphCardId.value = null
+  })
+}
 </script>
 
 <template>
   <div class="page">
     <nav class="breadcrumb" aria-label="面包屑">
-      <RouterLink to="/library" class="back-link">
+      <RouterLink to="/library" class="back-link" @click="goBack">
         <ArrowLeft :size="14" aria-hidden="true" />番剧库
       </RouterLink>
       <span class="sep">/</span>
@@ -237,6 +249,7 @@ async function refreshMetadata() {
   background: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lift);
+  view-transition-name: cover-morph;
 }
 
 .edit-btn {

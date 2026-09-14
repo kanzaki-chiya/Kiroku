@@ -95,21 +95,32 @@ function resetAll() {
       class="toolbar-block"
     />
 
-    <div v-if="filtered.length" class="entries" :class="`layout-${layout}`">
-      <AnimeCard
-        v-for="entry in filtered"
-        :key="entry.subject.id"
-        :entry="entry"
-        :layout="layout"
-      />
-    </div>
+    <Transition name="swap" mode="out-in">
+      <TransitionGroup
+        v-if="filtered.length"
+        key="shelf"
+        name="shelf"
+        tag="div"
+        class="entries"
+        :class="`layout-${layout}`"
+        appear
+      >
+        <AnimeCard
+          v-for="(entry, index) in filtered"
+          :key="entry.subject.id"
+          :entry="entry"
+          :layout="layout"
+          :style="{ '--i': index }"
+        />
+      </TransitionGroup>
 
-    <div v-else class="empty">
-      <SearchX :size="34" class="empty-icon" aria-hidden="true" />
-      <p class="empty-title">没有找到符合条件的番剧</p>
-      <p class="empty-sub">换个关键词，或者清空筛选再看看。</p>
-      <button type="button" class="btn btn-ghost" @click="resetAll">清空筛选条件</button>
-    </div>
+      <div v-else key="empty" class="empty">
+        <SearchX :size="34" class="empty-icon" aria-hidden="true" />
+        <p class="empty-title">没有找到符合条件的番剧</p>
+        <p class="empty-sub">换个关键词，或者清空筛选再看看。</p>
+        <button type="button" class="btn btn-ghost" @click="resetAll">清空筛选条件</button>
+      </div>
+    </Transition>
 
     <footer class="page-foot">
       <span>显示 {{ filtered.length }} / {{ store.count }} 部</span>
@@ -159,6 +170,35 @@ function resetAll() {
   display: flex;
   flex-direction: column;
   gap: 9px;
+}
+
+.shelf-move {
+  transition: transform 360ms var(--ease-spring);
+}
+
+.shelf-enter-active {
+  transition: opacity 240ms var(--ease-snap), transform 240ms var(--ease-snap);
+}
+
+.shelf-leave-active {
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+  position: absolute;
+}
+
+.shelf-enter-from,
+.shelf-leave-to {
+  opacity: 0;
+  transform: scale(0.94);
+}
+
+.shelf-appear-active {
+  transition: opacity 320ms var(--ease-snap), transform 320ms var(--ease-snap);
+  transition-delay: min(360ms, calc(var(--i, 0) * 24ms));
+}
+
+.shelf-appear-from {
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
 }
 
 .empty {
