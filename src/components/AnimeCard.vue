@@ -20,6 +20,20 @@ const tierStyle = computed(() =>
 )
 const isMorph = computed(() => morphCardId.value === props.entry.subject.id)
 
+const progressText = computed(() => {
+  const p = props.entry.personal.progress
+  if (p === null) return ''
+  const total = props.entry.subject.episodes
+  return total > 0 ? `${p}/${total} 话` : `${p} 话`
+})
+
+const progressPct = computed(() => {
+  const p = props.entry.personal.progress
+  const total = props.entry.subject.episodes
+  if (p === null || total <= 0) return null
+  return Math.min(100, Math.round((p / total) * 100))
+})
+
 function open(event: MouseEvent) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
   if (!canMorph()) return
@@ -48,10 +62,21 @@ function open(event: MouseEvent) {
         {{ entry.personal.tier ?? '—' }}
       </span>
       <span class="status-chip">{{ statusLabels[entry.personal.status] }}</span>
+      <span
+        v-if="progressPct !== null"
+        class="cover-progress"
+        role="img"
+        :aria-label="`已看 ${progressText}`"
+      >
+        <i :style="{ width: `${progressPct}%` }" />
+      </span>
     </div>
     <div class="card-body">
       <h3 class="card-title">{{ entry.subject.nameCn }}</h3>
-      <p class="card-meta">{{ entry.subject.year }} · {{ formatLabels[entry.subject.format] }}</p>
+      <p class="card-meta">
+        {{ entry.subject.year }} · {{ formatLabels[entry.subject.format]
+        }}<template v-if="progressText"> · 看到 {{ progressText }}</template>
+      </p>
       <div class="ratings">
         <span class="rating mine" :title="`我的评分 ${formatScore(entry.personal.score)}`">
           <Star :size="12" class="star" aria-hidden="true" />
@@ -123,6 +148,25 @@ function open(event: MouseEvent) {
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   color: #fff;
+}
+
+.cover-progress {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 0;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.32);
+  overflow: hidden;
+}
+
+.cover-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--score-gold);
+  transition: width 260ms var(--ease-snap);
 }
 
 .card-title {

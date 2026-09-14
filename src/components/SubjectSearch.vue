@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { RotateCcw, Search } from 'lucide-vue-next'
 import { bangumiApi } from '../api/bangumi'
 import { isTauri } from '../runtime'
@@ -10,12 +11,17 @@ import { formatLabels, formatScore } from '../utils/format'
 import AnimeCover from './AnimeCover.vue'
 import RatingForm from './RatingForm.vue'
 
+const props = defineProps<{
+  prefillId?: number
+}>()
+
 const emit = defineEmits<{
   saved: [subjectId: number]
   dirty: [dirty: boolean]
 }>()
 
 const store = useLibraryStore()
+const router = useRouter()
 const desktop = isTauri()
 const entryInitial = { ...emptyDraft(), score: 7 }
 
@@ -111,6 +117,24 @@ async function pick(subject: BangumiSubject) {
   }
 }
 
+async function applyPrefill(id: number) {
+  if (store.hasSubject(id)) {
+    router.replace(`/anime/${id}`)
+    return
+  }
+  addError.value = ''
+  try {
+    const full = await bangumiApi.getSubject(id)
+    if (!full) {
+      addError.value = 'Bangumi 上找不到这部作品'
+      return
+    }
+    selected.value = full
+  } catch (err) {
+    addError.value = err instanceof Error ? err.message : '无法读取作品资料'
+  }
+}
+
 function reselect() {
   if (formDirty.value && !window.confirm('当前填写的评分还没有保存，确定放弃吗？')) return
   selected.value = null
@@ -140,7 +164,17 @@ function onFormCancel() {
   reselect()
 }
 
-onMounted(loadSuggestions)
+onMounted(() => {
+  loadSuggestions()
+  if (props.prefillId) void applyPrefill(props.prefillId)
+})
+
+watch(
+  () => props.prefillId,
+  id => {
+    if (id) void applyPrefill(id)
+  }
+)
 
 onBeforeUnmount(() => {
   abort?.abort()
@@ -219,6 +253,7 @@ onBeforeUnmount(() => {
       </ul>
 
       <div v-else class="idle-block">
+        <p v-if="addError" class="state-line error" role="alert">{{ addError }}</p>
         <p v-if="suggestionsPhase === 'loading'" class="state-line" role="status">
           {{ desktop ? '正在读取最近搜索…' : '正在读取推荐…' }}
         </p>
@@ -276,6 +311,7 @@ onBeforeUnmount(() => {
           :initial="entryInitial"
           :tiers="store.tiers"
           :busy="store.saving"
+          :total-episodes="selected.episodes"
           submit-label="收录到我的番剧库"
           @save="onSave"
           @cancel="onFormCancel"

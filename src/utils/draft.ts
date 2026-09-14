@@ -25,6 +25,9 @@ export function validateDraft(draft: PersonalDraft, knownTiers: string[]): Perso
   if (!statuses.includes(draft.status)) {
     throw new Error('无效的观看状态')
   }
+  if (draft.progress !== null && (!Number.isInteger(draft.progress) || draft.progress < 0)) {
+    throw new Error('观看进度需要是不小于 0 的整数')
+  }
   for (const key of dimensionKeys) {
     const value = draft.dimensions[key]
     if (value !== null && !isValidDimension(value)) {
@@ -42,6 +45,7 @@ export function cloneDraft(draft: PersonalDraft): PersonalDraft {
     score: draft.score,
     tier: draft.tier,
     status: draft.status,
+    progress: draft.progress,
     dimensions: { ...draft.dimensions },
     review: draft.review
   }
@@ -52,7 +56,7 @@ export function emptyDimensions(): Record<(typeof dimensionKeys)[number], number
 }
 
 export function emptyDraft(status: WatchStatus = 'completed'): PersonalDraft {
-  return { score: null, tier: null, status, dimensions: emptyDimensions(), review: '' }
+  return { score: null, tier: null, status, progress: null, dimensions: emptyDimensions(), review: '' }
 }
 
 export function personalFieldsConflict(left: PersonalDraft, right: PersonalDraft): boolean {
@@ -60,7 +64,8 @@ export function personalFieldsConflict(left: PersonalDraft, right: PersonalDraft
     left.score !== right.score ||
     left.review !== right.review ||
     left.tier !== right.tier ||
-    left.status !== right.status
+    left.status !== right.status ||
+    (left.progress ?? null) !== (right.progress ?? null)
   ) {
     return true
   }

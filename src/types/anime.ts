@@ -30,9 +30,16 @@ export interface PersonalDraft {
   score: number | null
   tier: Tier | null
   status: WatchStatus
+  /** 已看话数；null 表示未记录 */
+  progress: number | null
   /** 0–5 星，0.5 步进；null 表示未评 */
   dimensions: Record<DimensionKey, number | null>
   review: string
+}
+
+export interface RelatedSubject {
+  relation: string
+  subject: BangumiSubject
 }
 
 export interface PersonalRecord extends PersonalDraft {

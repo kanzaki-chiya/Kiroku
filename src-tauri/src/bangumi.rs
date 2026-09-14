@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 use url::Url;
 
 use crate::error::AppError;
-use crate::models::{CommunityDto, SubjectDto};
+use crate::models::{CommunityDto, RelatedSubjectDto, SubjectDto};
 use crate::validate::now_iso;
 
 const BASE: &str = "https://api.bgm.tv";
@@ -118,6 +118,14 @@ impl BangumiClient {
             .await?;
         Ok(adapt_subject(raw))
     }
+
+    pub async fn get_relations(&self, id: i64) -> Result<Vec<RelatedSubjectDto>, AppError> {
+        let url = format!("{BASE}/v0/subjects/{id}/subjects");
+        let raw: Vec<RawRelation> = self
+            .request_json(reqwest::Method::GET, &url, None)
+            .await?;
+        Ok(raw.into_iter().map(adapt_relation).collect())
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -183,6 +191,20 @@ struct RawImages {
 #[derive(Debug, Deserialize)]
 struct RawTag {
     name: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawRelation {
+    id: i64,
+    #[serde(default)]
+    relation: String,
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    name_cn: String,
+    date: Option<String>,
+    images: Option<RawImages>,
+    platform: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -300,6 +322,33 @@ fn adapt_subject(raw: RawSubject) -> SubjectDto {
             rank,
             fetched_at: Some(fetched),
             status: Some(status.into()),
+        },
+    }
+}
+
+fn adapt_relation(raw: RawRelation) -> RelatedSubjectDto {
+    RelatedSubjectDto {
+        relation: raw.relation,
+        subject: SubjectDto {
+            id: raw.id,
+            name: raw.name.clone(),
+            name_cn: fallback_name(&raw.name_cn, &raw.name),
+            aliases: None,
+            summary: String::new(),
+            cover_url: raw.images.as_ref().and_then(first_image).unwrap_or_default(),
+            cover_local_path: None,
+            year: parse_year(raw.date.as_deref()),
+            format: map_format(raw.platform.as_deref().unwrap_or("")),
+            episodes: 0,
+            studio: String::new(),
+            tags: Vec::new(),
+            community: CommunityDto {
+                score: None,
+                votes: 0,
+                rank: None,
+                fetched_at: None,
+                status: Some("not_fetched".into()),
+            },
         },
     }
 }

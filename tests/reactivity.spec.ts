@@ -28,6 +28,7 @@ function makeEntry(subject: BangumiSubject, review: string): LibraryEntry {
       score: 8.5,
       tier: 'A',
       status: 'completed',
+      progress: 12,
       dimensions: emptyDimensions(),
       review,
       subjectId: subject.id,

@@ -69,6 +69,8 @@ pub struct PersonalDraftDto {
     pub score: Option<f64>,
     pub tier: Option<String>,
     pub status: String,
+    #[serde(default)]
+    pub progress: Option<i64>,
     pub dimensions: DimensionsDto,
     pub review: String,
 }
@@ -79,12 +81,21 @@ pub struct PersonalRecordDto {
     pub score: Option<f64>,
     pub tier: Option<String>,
     pub status: String,
+    #[serde(default)]
+    pub progress: Option<i64>,
     pub dimensions: DimensionsDto,
     pub review: String,
     pub subject_id: i64,
     pub created_at: String,
     pub updated_at: String,
     pub version: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RelatedSubjectDto {
+    pub relation: String,
+    pub subject: SubjectDto,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

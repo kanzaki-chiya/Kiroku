@@ -24,6 +24,7 @@ function makeEntry(personal: number | null, community: number | null): LibraryEn
     score: personal,
     tier: null,
     status: 'completed',
+    progress: null,
     dimensions: emptyDimensions(),
     review: ''
   }

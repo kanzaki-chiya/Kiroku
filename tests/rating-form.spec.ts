@@ -49,6 +49,7 @@ describe('RatingForm', () => {
       score: 7.5,
       tier: 'B',
       status: 'watching',
+      progress: 3,
       dimensions: { story: 4, characters: null, direction: null, animation: null, music: null },
       review: '原始短评'
     }

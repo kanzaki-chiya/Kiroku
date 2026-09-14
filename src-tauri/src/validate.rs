@@ -47,6 +47,11 @@ pub fn validate_draft(draft: &PersonalDraftDto, known_tiers: &[String]) -> Resul
     if !STATUSES.contains(&draft.status.as_str()) {
         return Err(AppError::validation("无效的观看状态"));
     }
+    if let Some(progress) = draft.progress {
+        if progress < 0 {
+            return Err(AppError::validation("观看进度不能为负数"));
+        }
+    }
     for (_key, value) in draft.dimensions.values() {
         if let Some(score) = value {
             dimension_to_tenths(score)?;
@@ -68,6 +73,7 @@ mod tests {
             score: Some(8.6),
             tier: Some("A".into()),
             status: "completed".into(),
+            progress: None,
             dimensions: DimensionsDto {
                 story: Some(4.0),
                 characters: None,

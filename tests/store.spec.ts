@@ -104,6 +104,32 @@ describe('library store', () => {
     await expect(store.update(KON_ID, emptyDraft())).rejects.toThrow()
   })
 
+  it('rejects negative or fractional progress', async () => {
+    const store = useLibraryStore()
+    const negative = emptyDraft('watching')
+    negative.progress = -1
+    await expect(store.add(konSubject(), negative)).rejects.toThrow()
+
+    const fractional = emptyDraft('watching')
+    fractional.progress = 2.5
+    await expect(store.add(konSubject(), fractional)).rejects.toThrow()
+    expect(store.count).toBe(12)
+  })
+
+  it('remove deletes an entry and is a no-op-safe repeat', async () => {
+    const store = useLibraryStore()
+    const draft = emptyDraft('watching')
+    draft.progress = 4
+    await store.add(konSubject(), draft)
+    expect(store.getEntry(KON_ID)?.personal.progress).toBe(4)
+
+    await store.remove(KON_ID)
+    expect(store.getEntry(KON_ID)).toBeNull()
+    expect(store.count).toBe(12)
+    await store.remove(KON_ID)
+    expect(store.count).toBe(12)
+  })
+
   it('treats dimension-only backup diffs as conflicts', async () => {
     const store = useLibraryStore()
     const backup = await store.exportBackup()

@@ -191,6 +191,18 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
+  async function remove(subjectId: number) {
+    if (desktop) {
+      try {
+        await invokeCmd('remove_library_entry', { bangumiSubjectId: subjectId })
+      } catch (error) {
+        throw toBackendError(error)
+      }
+    }
+    subjects.value.delete(subjectId)
+    records.value.delete(subjectId)
+  }
+
   function seed() {
     const subjectById = new Map(allSubjects.map(s => [s.id, s]))
     for (const seed of seedRecords) {
@@ -339,7 +351,7 @@ export const useLibraryStore = defineStore('library', () => {
   async function exportBackup() {
     if (!desktop) {
       return {
-        formatVersion: 2,
+        formatVersion: 3,
         exportedAt: new Date().toISOString(),
         tiers: tiers.value,
         entries: entries.value.map(entry => ({
@@ -450,6 +462,7 @@ export const useLibraryStore = defineStore('library', () => {
     hasSubject,
     add,
     update,
+    remove,
     hydrate,
     refreshSubject,
     saveTier,

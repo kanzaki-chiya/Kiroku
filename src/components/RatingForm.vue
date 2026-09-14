@@ -19,6 +19,7 @@ const props = defineProps<{
   submitLabel: string
   tiers: TierDefinition[]
   busy?: boolean
+  totalEpisodes?: number
 }>()
 
 const emit = defineEmits<{
@@ -31,6 +32,7 @@ const scoreEnabled = ref(props.initial.score !== null)
 const scoreInput = ref(props.initial.score === null ? '' : String(props.initial.score))
 const tier = ref<Tier | ''>(props.initial.tier ?? '')
 const status = ref<WatchStatus>(props.initial.status)
+const progressInput = ref(props.initial.progress === null ? '' : String(props.initial.progress))
 const review = ref(props.initial.review)
 
 const dimValues = reactive<Record<DimensionKey, number | null>>({
@@ -59,6 +61,7 @@ const currentDraft = computed<PersonalDraft>(() => ({
   score: scoreEnabled.value ? parseLenient(scoreInput.value) : null,
   tier: tier.value === '' ? null : tier.value,
   status: status.value,
+  progress: parseLenient(progressInput.value),
   dimensions: { ...dimValues },
   review: review.value
 }))
@@ -81,6 +84,19 @@ const statusOptions: { value: WatchStatus; label: string }[] = [
   { value: 'watching', label: statusLabels.watching },
   { value: 'completed', label: statusLabels.completed }
 ]
+
+const total = computed(() => (props.totalEpisodes && props.totalEpisodes > 0 ? props.totalEpisodes : null))
+
+watch(status, value => {
+  if (value === 'completed' && progressInput.value.trim() === '' && total.value !== null) {
+    progressInput.value = String(total.value)
+  }
+})
+
+function bumpDraftProgress() {
+  const next = (parseLenient(progressInput.value) ?? 0) + 1
+  progressInput.value = String(total.value !== null ? Math.min(next, total.value) : next)
+}
 
 const fillPct = computed(() => (sliderValue(scoreInput.value) / 10) * 100)
 
@@ -119,6 +135,12 @@ function onSubmit() {
     score = result
   }
 
+  const progress = parseLenient(progressInput.value)
+  if (progress !== null && (!Number.isInteger(progress) || progress < 0)) {
+    error.value = '观看进度需要是不小于 0 的整数'
+    return
+  }
+
   const dimensions = {} as Record<DimensionKey, number | null>
   for (const key of dimensionKeys) {
     const value = dimValues[key]
@@ -138,6 +160,7 @@ function onSubmit() {
     score,
     tier: tier.value === '' ? null : tier.value,
     status: status.value,
+    progress,
     dimensions,
     review: review.value
   })
@@ -229,6 +252,27 @@ function onCancel() {
     <div class="field-group">
       <span class="group-title">状态</span>
       <SegmentedControl v-model="status" :options="statusOptions" aria-label="观看状态" />
+    </div>
+
+    <div v-if="status !== 'planned'" class="field-group">
+      <div class="group-head">
+        <span class="group-title">观看进度<span class="counter">可留空</span></span>
+      </div>
+      <div class="progress-body">
+        <input
+          v-model="progressInput"
+          class="progress-number"
+          type="number"
+          min="0"
+          :max="total ?? undefined"
+          step="1"
+          inputmode="numeric"
+          aria-label="已看话数"
+          placeholder="–"
+        />
+        <span v-if="total !== null" class="progress-total">/ 共 {{ total }} 话</span>
+        <button type="button" class="progress-plus" @click="bumpDraftProgress">+1 话</button>
+      </div>
     </div>
 
     <fieldset class="field-group">
@@ -575,6 +619,77 @@ function onCancel() {
 .band-leave-to {
   opacity: 0;
   transform: translateY(-5px);
+}
+
+.progress-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-number {
+  width: 84px;
+  height: 44px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  background: var(--fill);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  appearance: textfield;
+  -moz-appearance: textfield;
+  transition: background var(--motion-fast) var(--ease-snap),
+    border-color var(--motion-fast) var(--ease-snap),
+    box-shadow var(--motion-fast) var(--ease-snap);
+}
+
+.progress-number::-webkit-outer-spin-button,
+.progress-number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.progress-number:hover:not(:focus) {
+  background: var(--fill-strong);
+}
+
+.progress-number:focus {
+  background: var(--surface);
+  border-color: var(--brand);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.progress-number::placeholder {
+  color: var(--muted);
+}
+
+.progress-total {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.progress-plus {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--brand);
+  background: var(--fill);
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  transition: background var(--motion-fast) var(--ease-snap),
+    transform 100ms ease-out;
+}
+
+.progress-plus:hover {
+  background: var(--fill-strong);
+}
+
+.progress-plus:active {
+  transform: scale(0.96);
 }
 
 .dim-row {

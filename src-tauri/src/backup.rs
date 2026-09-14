@@ -5,7 +5,7 @@ use crate::error::AppError;
 use crate::models::{BackupDocument, BackupEntry, ImportPayload, ImportPreview};
 use crate::validate::now_iso;
 
-const FORMAT_VERSION: i64 = 2;
+const FORMAT_VERSION: i64 = 3;
 
 pub fn export_document(conn: &Connection) -> Result<BackupDocument, AppError> {
     let entries = db::list_library_entries(conn)?
@@ -60,7 +60,7 @@ fn preview_normalized(conn: &Connection, document: &BackupDocument) -> Result<Im
 }
 
 fn validate_document(document: &BackupDocument) -> Result<(), AppError> {
-    if document.format_version != 1 && document.format_version != 2 {
+    if !(1..=3).contains(&document.format_version) {
         return Err(AppError::validation(format!(
             "不支持的备份版本 {}",
             document.format_version
@@ -107,6 +107,7 @@ fn personal_conflicts(
         || left.review != right.review
         || left.tier != right.tier
         || left.status != right.status
+        || left.progress != right.progress
         || left.dimensions != right.dimensions
 }
 
@@ -145,6 +146,7 @@ mod tests {
             score: Some(8.0),
             tier: Some("A".into()),
             status: "completed".into(),
+            progress: Some(12),
             dimensions: DimensionsDto {
                 story: Some(4.0),
                 characters: None,
@@ -173,7 +175,7 @@ mod tests {
         let mut conn = db::open_memory().unwrap();
         db::add_library_entry(&mut conn, &subject(1), &draft()).unwrap();
         let mut document = export_document(&conn).unwrap();
-        assert_eq!(document.format_version, 2);
+        assert_eq!(document.format_version, 3);
         document.format_version = 1;
         document.entries[0].personal.dimensions.story = Some(8.7);
         document.entries[0].personal.dimensions.music = Some(9.0);

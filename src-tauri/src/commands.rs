@@ -10,8 +10,8 @@ use crate::db;
 use crate::error::AppError;
 use crate::models::{
     AddEntryPayload, BackupDocument, BootstrapInfo, ImportPayload, ImportPreview, LibraryEntryDto,
-    ListLibraryQuery, ListLibraryResponse, SaveTierPayload, StatisticsDto, SubjectDto, TierDto,
-    UpdateRecordPayload,
+    ListLibraryQuery, ListLibraryResponse, RelatedSubjectDto, SaveTierPayload, StatisticsDto,
+    SubjectDto, TierDto, UpdateRecordPayload,
 };
 use crate::{backup, stats};
 
@@ -129,6 +129,27 @@ pub fn update_personal_record(
 }
 
 #[tauri::command]
+pub fn remove_library_entry(
+    state: State<AppState>,
+    bangumi_subject_id: i64,
+) -> Result<(), AppError> {
+    let live = live(&state)?;
+    let cover_path = {
+        let conn = lock_db(live)?;
+        db::remove_library_entry(&conn, bangumi_subject_id)?
+    };
+    if let Some(relative) = cover_path {
+        let path = live.data_dir.join(&relative);
+        if let Err(err) = fs::remove_file(&path) {
+            if err.kind() != std::io::ErrorKind::NotFound {
+                log::warn!("移除收藏后封面清理失败：{err}");
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn list_tiers(state: State<AppState>) -> Result<Vec<TierDto>, AppError> {
     let live = live(&state)?;
     let conn = lock_db(live)?;
@@ -176,6 +197,15 @@ pub async fn get_subject(state: State<'_, AppState>, bangumi_subject_id: i64) ->
 }
 
 #[tauri::command]
+pub async fn get_subject_relations(
+    state: State<'_, AppState>,
+    bangumi_subject_id: i64,
+) -> Result<Vec<RelatedSubjectDto>, AppError> {
+    let live = live(&state)?;
+    live.bangumi.get_relations(bangumi_subject_id).await
+}
+
+#[tauri::command]
 pub fn list_recent_searches(state: State<AppState>) -> Result<Vec<SubjectDto>, AppError> {
     let live = live(&state)?;
     let conn = lock_db(live)?;
@@ -188,13 +218,32 @@ pub fn list_recent_searches(state: State<AppState>) -> Result<Vec<SubjectDto>, A
 
 #[tauri::command]
 pub async fn refresh_subject(
+    app: AppHandle,
     state: State<'_, AppState>,
     bangumi_subject_id: i64,
 ) -> Result<LibraryEntryDto, AppError> {
     let live = live(&state)?;
     let fetched = live.bangumi.get_subject(bangumi_subject_id).await?;
-    let mut conn = lock_db(live)?;
-    db::refresh_subject_metadata(&mut conn, &fetched)
+    let entry = {
+        let mut conn = lock_db(live)?;
+        db::refresh_subject_metadata(&mut conn, &fetched)?
+    };
+    let cover_missing = entry
+        .subject
+        .cover_local_path
+        .as_deref()
+        .map(|path| !live.data_dir.join(path).exists())
+        .unwrap_or(true);
+    if cover_missing {
+        spawn_cover_download(
+            app,
+            live.data_dir.clone(),
+            entry.local_id,
+            entry.subject.id,
+            fetched.cover_url.clone(),
+        );
+    }
+    Ok(entry)
 }
 
 #[tauri::command]

@@ -34,6 +34,7 @@ function makeEntry(options: {
       score: options.score ?? null,
       tier: options.tier ?? null,
       status: options.status ?? 'completed',
+      progress: null,
       dimensions: emptyDimensions(),
       review: '',
       subjectId: options.id,

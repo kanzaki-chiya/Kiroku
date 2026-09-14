@@ -2,12 +2,13 @@ import { allSubjects } from '../data/subjects'
 import { isTauri } from '../runtime'
 import { BackendError } from '../services/errors'
 import { invokeCmd } from '../services/tauri'
-import type { BangumiSubject } from '../types/anime'
+import type { BangumiSubject, RelatedSubject } from '../types/anime'
 
 export interface BangumiApi {
   searchSubjects(query: string, signal?: AbortSignal): Promise<BangumiSubject[]>
   getSubject(id: number, signal?: AbortSignal): Promise<BangumiSubject | null>
   getSuggestions(signal?: AbortSignal): Promise<BangumiSubject[]>
+  getRelations(id: number, signal?: AbortSignal): Promise<RelatedSubject[]>
 }
 
 const SEARCH_DELAY = 350
@@ -72,6 +73,27 @@ const mockBangumiApi: BangumiApi = {
   async getSuggestions(signal) {
     await delay(SUGGEST_DELAY, signal)
     return allSubjects.map(cloneSubject)
+  },
+
+  async getRelations(id, signal) {
+    await delay(DETAIL_DELAY, signal)
+    const self = allSubjects.find(subject => subject.id === id)
+    if (!self) return []
+    return allSubjects
+      .filter(subject => subject.id !== id)
+      .map(subject => ({
+        subject,
+        shared:
+          subject.tags.filter(tag => self.tags.includes(tag)).length +
+          (subject.studio === self.studio ? 1 : 0)
+      }))
+      .filter(item => item.shared > 0)
+      .sort((a, b) => b.shared - a.shared)
+      .slice(0, 6)
+      .map(item => ({
+        relation: item.shared >= 2 ? '衍生' : '相同世界观',
+        subject: cloneSubject(item.subject)
+      }))
   }
 }
 
@@ -96,6 +118,10 @@ const tauriBangumiApi: BangumiApi = {
   async getSuggestions(signal) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     return invokeCmd<BangumiSubject[]>('list_recent_searches')
+  },
+  async getRelations(id, signal) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    return invokeCmd<RelatedSubject[]>('get_subject_relations', { bangumiSubjectId: id })
   }
 }
 

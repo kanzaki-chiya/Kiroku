@@ -220,6 +220,7 @@ mod tests {
                 score: personal,
                 tier: None,
                 status: "completed".into(),
+                progress: None,
                 dimensions: DimensionsDto {
                     story: None,
                     characters: None,

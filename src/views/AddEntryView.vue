@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import SubjectSearch from '../components/SubjectSearch.vue'
 import { useUnsavedGuard } from '../composables/useUnsavedGuard'
 import { useNotices } from '../stores/notices'
 
+const route = useRoute()
 const router = useRouter()
 const { push } = useNotices()
 const dirty = ref(false)
+
+const prefillId = computed(() => {
+  const raw = Number(route.query.subject)
+  return Number.isInteger(raw) && raw > 0 ? raw : undefined
+})
 
 useUnsavedGuard(dirty)
 
@@ -31,7 +37,7 @@ function onSaved(subjectId: number) {
       <p class="page-sub">搜索 Bangumi 作品资料，再写下自己的评分。个人记录只保存在本地。</p>
     </header>
 
-    <SubjectSearch @saved="onSaved" @dirty="dirty = $event" />
+    <SubjectSearch :prefill-id="prefillId" @saved="onSaved" @dirty="dirty = $event" />
   </div>
 </template>
 

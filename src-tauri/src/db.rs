@@ -138,6 +138,18 @@ fn migrate(conn: &Connection) -> Result<(), AppError> {
         )?;
         tx.commit()?;
     }
+    if current < 3 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute(
+            "ALTER TABLE personal_records ADD COLUMN progress INTEGER",
+            [],
+        )?;
+        tx.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (3, ?1)",
+            params![now_iso()],
+        )?;
+        tx.commit()?;
+    }
     Ok(())
 }
 
@@ -414,15 +426,36 @@ pub fn add_library_entry(
         .map(|value| score_to_tenths(value, "个人评分"))
         .transpose()?;
     tx.execute(
-        "INSERT INTO personal_records (subject_id, score, tier_id, status, review, created_at, updated_at, version)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, 1)",
-        params![local_id, score, tier_id, draft.status, draft.review, now],
+        "INSERT INTO personal_records (subject_id, score, tier_id, status, review, progress, created_at, updated_at, version)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7, 1)",
+        params![local_id, score, tier_id, draft.status, draft.review, draft.progress, now],
     )?;
     let record_id = tx.last_insert_rowid();
     insert_dimensions(&tx, record_id, draft)?;
     tx.commit()?;
     get_library_entry_by_bangumi_id(conn, subject.id)?
         .ok_or_else(|| AppError::internal("写入后无法读取收藏"))
+}
+
+pub fn remove_library_entry(
+    conn: &Connection,
+    bangumi_subject_id: i64,
+) -> Result<Option<String>, AppError> {
+    let row = conn
+        .query_row(
+            "SELECT s.id, s.cover_local_path
+             FROM subjects s
+             JOIN personal_records p ON p.subject_id = s.id
+             WHERE s.bangumi_subject_id = ?1",
+            params![bangumi_subject_id],
+            |row| Ok((row.get::<_, i64>(0)?, row.get::<_, Option<String>>(1)?)),
+        )
+        .optional()?;
+    let Some((local_id, cover_path)) = row else {
+        return Err(AppError::not_found("这部作品还没有收录"));
+    };
+    conn.execute("DELETE FROM subjects WHERE id = ?1", params![local_id])?;
+    Ok(cover_path)
 }
 
 pub fn update_personal_record(
@@ -465,9 +498,9 @@ pub fn update_personal_record(
         .transpose()?;
     let changed = tx.execute(
         "UPDATE personal_records
-         SET score = ?1, tier_id = ?2, status = ?3, review = ?4, updated_at = ?5, version = version + 1
-         WHERE id = ?6 AND version = ?7",
-        params![score, tier_id, draft.status, draft.review, now, record_id, version],
+         SET score = ?1, tier_id = ?2, status = ?3, review = ?4, progress = ?5, updated_at = ?6, version = version + 1
+         WHERE id = ?7 AND version = ?8",
+        params![score, tier_id, draft.status, draft.review, draft.progress, now, record_id, version],
     )?;
     if changed == 0 {
         return Err(AppError::conflict("记录已被其他窗口修改，请刷新后重试"));
@@ -490,6 +523,7 @@ pub fn import_entries(
             score: item.personal.score,
             tier: item.personal.tier.clone(),
             status: item.personal.status.clone(),
+            progress: item.personal.progress,
             dimensions: item.personal.dimensions.clone(),
             review: item.personal.review.clone(),
         };
@@ -517,9 +551,9 @@ pub fn import_entries(
                 .transpose()?;
             let changed = tx.execute(
                 "UPDATE personal_records
-                 SET score = ?1, tier_id = ?2, status = ?3, review = ?4, updated_at = ?5, version = version + 1
-                 WHERE id = ?6 AND version = ?7",
-                params![score, tier_id, draft.status, draft.review, now, record_id, version],
+                 SET score = ?1, tier_id = ?2, status = ?3, review = ?4, progress = ?5, updated_at = ?6, version = version + 1
+                 WHERE id = ?7 AND version = ?8",
+                params![score, tier_id, draft.status, draft.review, draft.progress, now, record_id, version],
             )?;
             if changed == 0 {
                 return Err(AppError::conflict("导入时记录版本冲突"));
@@ -533,9 +567,9 @@ pub fn import_entries(
                 .map(|value| score_to_tenths(value, "个人评分"))
                 .transpose()?;
             tx.execute(
-                "INSERT INTO personal_records (subject_id, score, tier_id, status, review, created_at, updated_at, version)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, 1)",
-                params![local_id, score, tier_id, draft.status, draft.review, now],
+                "INSERT INTO personal_records (subject_id, score, tier_id, status, review, progress, created_at, updated_at, version)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7, 1)",
+                params![local_id, score, tier_id, draft.status, draft.review, draft.progress, now],
             )?;
             let record_id = tx.last_insert_rowid();
             insert_dimensions(&tx, record_id, &draft)?;
@@ -583,7 +617,7 @@ pub fn list_library_entries(conn: &Connection) -> Result<Vec<LibraryEntryDto>, A
             s.id, s.bangumi_subject_id, s.name, s.name_cn, s.aliases_json, s.summary, s.cover_url,
             s.cover_local_path, s.year, s.format, s.episodes, s.studio, s.tags_json,
             c.score, c.votes, c.rank, c.fetched_at, c.status,
-            p.id, p.score, p.status, p.review, p.created_at, p.updated_at, p.version, t.name
+            p.id, p.score, p.status, p.review, p.progress, p.created_at, p.updated_at, p.version, t.name
          FROM personal_records p
          JOIN subjects s ON s.id = p.subject_id
          LEFT JOIN community_snapshots c ON c.subject_id = s.id
@@ -625,8 +659,9 @@ pub fn list_library_entries(conn: &Connection) -> Result<Vec<LibraryEntryDto>, A
             },
             personal: PersonalRecordDto {
                 score: personal_score.map(tenths_to_score),
-                tier: row.get(25)?,
+                tier: row.get(26)?,
                 status: row.get(20)?,
+                progress: row.get(22)?,
                 dimensions: DimensionsDto {
                     story: None,
                     characters: None,
@@ -636,9 +671,9 @@ pub fn list_library_entries(conn: &Connection) -> Result<Vec<LibraryEntryDto>, A
                 },
                 review: row.get(21)?,
                 subject_id: row.get(1)?,
-                created_at: row.get(22)?,
-                updated_at: row.get(23)?,
-                version: row.get(24)?,
+                created_at: row.get(23)?,
+                updated_at: row.get(24)?,
+                version: row.get(25)?,
             },
         });
     }
@@ -763,6 +798,7 @@ mod tests {
             score,
             tier: Some("A".into()),
             status: "completed".into(),
+            progress: None,
             dimensions: DimensionsDto {
                 story: Some(4.0),
                 characters: None,
@@ -798,6 +834,24 @@ mod tests {
         assert_eq!(updated.subject.name_cn, "作品");
         let stale = update_personal_record(&mut conn, 2, &next, created.personal.version).unwrap_err();
         assert_eq!(stale.code, "CONFLICT");
+    }
+
+    #[test]
+    fn remove_deletes_entry_and_reports_missing() {
+        let mut conn = open_memory().unwrap();
+        let mut watching = draft(Some(7.0));
+        watching.status = "watching".into();
+        watching.progress = Some(6);
+        add_library_entry(&mut conn, &subject(3), &watching).unwrap();
+        let stored = get_library_entry_by_bangumi_id(&conn, 3).unwrap().unwrap();
+        assert_eq!(stored.personal.progress, Some(6));
+
+        let cover = remove_library_entry(&conn, 3).unwrap();
+        assert_eq!(cover, None);
+        assert!(get_library_entry_by_bangumi_id(&conn, 3).unwrap().is_none());
+
+        let err = remove_library_entry(&conn, 3).unwrap_err();
+        assert_eq!(err.code, "NOT_FOUND");
     }
 
     fn tier_payload(name: &str) -> crate::models::SaveTierPayload {
@@ -902,11 +956,19 @@ mod tests {
         assert_eq!(characters, 40);
         assert_eq!(direction, 5);
         assert_eq!(animation, None);
+        let progress: Option<i64> = conn
+            .query_row(
+                "SELECT progress FROM personal_records WHERE id = ?1",
+                params![record_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(progress, None);
         let version: i64 = conn
             .query_row("SELECT MAX(version) FROM schema_migrations", [], |row| {
                 row.get(0)
             })
             .unwrap();
-        assert_eq!(version, 2);
+        assert_eq!(version, 3);
     }
 }

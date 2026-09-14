@@ -65,6 +65,7 @@ function onCancel() {
           :initial="initial"
           :tiers="store.tiers"
           :busy="store.saving"
+          :total-episodes="entry.subject.episodes"
           submit-label="保存修改"
           @save="onSave"
           @cancel="onCancel"
