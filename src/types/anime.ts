@@ -42,6 +42,13 @@ export interface RelatedSubject {
   subject: BangumiSubject
 }
 
+export interface CalendarDay {
+  /** 1 = 周一 … 7 = 周日 */
+  weekday: number
+  label: string
+  items: BangumiSubject[]
+}
+
 export interface PersonalRecord extends PersonalDraft {
   subjectId: number
   createdAt: string

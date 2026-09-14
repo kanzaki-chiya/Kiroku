@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import SubjectSearch from '../components/SubjectSearch.vue'
 import { useUnsavedGuard } from '../composables/useUnsavedGuard'
 import { useNotices } from '../stores/notices'
+import type { WatchStatus } from '../types/anime'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,6 +14,11 @@ const dirty = ref(false)
 const prefillId = computed(() => {
   const raw = Number(route.query.subject)
   return Number.isInteger(raw) && raw > 0 ? raw : undefined
+})
+
+const prefillStatus = computed<WatchStatus | undefined>(() => {
+  const raw = route.query.status
+  return raw === 'planned' || raw === 'watching' || raw === 'completed' ? raw : undefined
 })
 
 useUnsavedGuard(dirty)
@@ -37,7 +43,12 @@ function onSaved(subjectId: number) {
       <p class="page-sub">搜索 Bangumi 作品资料，再写下自己的评分。个人记录只保存在本地。</p>
     </header>
 
-    <SubjectSearch :prefill-id="prefillId" @saved="onSaved" @dirty="dirty = $event" />
+    <SubjectSearch
+      :prefill-id="prefillId"
+      :prefill-status="prefillStatus"
+      @saved="onSaved"
+      @dirty="dirty = $event"
+    />
   </div>
 </template>
 

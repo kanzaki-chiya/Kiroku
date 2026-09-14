@@ -40,6 +40,7 @@ pub fn run() {
             commands::search_subjects,
             commands::get_subject,
             commands::get_subject_relations,
+            commands::get_calendar,
             commands::list_recent_searches,
             commands::refresh_subject,
             commands::get_statistics,

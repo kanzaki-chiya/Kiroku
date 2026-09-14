@@ -100,6 +100,14 @@ pub struct RelatedSubjectDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CalendarDayDto {
+    pub weekday: i64,
+    pub label: String,
+    pub items: Vec<SubjectDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LibraryEntryDto {
     pub local_id: i64,
     pub subject: SubjectDto,

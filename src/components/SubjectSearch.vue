@@ -5,7 +5,7 @@ import { RotateCcw, Search } from 'lucide-vue-next'
 import { bangumiApi } from '../api/bangumi'
 import { isTauri } from '../runtime'
 import { useLibraryStore } from '../stores/library'
-import type { BangumiSubject, PersonalDraft } from '../types/anime'
+import type { BangumiSubject, PersonalDraft, WatchStatus } from '../types/anime'
 import { emptyDraft } from '../utils/draft'
 import { formatLabels, formatScore } from '../utils/format'
 import AnimeCover from './AnimeCover.vue'
@@ -13,6 +13,7 @@ import RatingForm from './RatingForm.vue'
 
 const props = defineProps<{
   prefillId?: number
+  prefillStatus?: WatchStatus
 }>()
 
 const emit = defineEmits<{
@@ -23,7 +24,10 @@ const emit = defineEmits<{
 const store = useLibraryStore()
 const router = useRouter()
 const desktop = isTauri()
-const entryInitial = { ...emptyDraft(), score: 7 }
+const entryInitial = computed(() => ({
+  ...emptyDraft(props.prefillStatus ?? 'completed'),
+  score: props.prefillStatus === 'planned' ? null : 7
+}))
 
 const query = ref('')
 const results = ref<BangumiSubject[]>([])

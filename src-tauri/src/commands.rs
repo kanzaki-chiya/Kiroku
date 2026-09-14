@@ -9,9 +9,9 @@ use crate::covers;
 use crate::db;
 use crate::error::AppError;
 use crate::models::{
-    AddEntryPayload, BackupDocument, BootstrapInfo, ImportPayload, ImportPreview, LibraryEntryDto,
-    ListLibraryQuery, ListLibraryResponse, RelatedSubjectDto, SaveTierPayload, StatisticsDto,
-    SubjectDto, TierDto, UpdateRecordPayload,
+    AddEntryPayload, BackupDocument, BootstrapInfo, CalendarDayDto, ImportPayload, ImportPreview,
+    LibraryEntryDto, ListLibraryQuery, ListLibraryResponse, RelatedSubjectDto, SaveTierPayload,
+    StatisticsDto, SubjectDto, TierDto, UpdateRecordPayload,
 };
 use crate::{backup, stats};
 
@@ -203,6 +203,12 @@ pub async fn get_subject_relations(
 ) -> Result<Vec<RelatedSubjectDto>, AppError> {
     let live = live(&state)?;
     live.bangumi.get_relations(bangumi_subject_id).await
+}
+
+#[tauri::command]
+pub async fn get_calendar(state: State<'_, AppState>) -> Result<Vec<CalendarDayDto>, AppError> {
+    let live = live(&state)?;
+    live.bangumi.get_calendar().await
 }
 
 #[tauri::command]

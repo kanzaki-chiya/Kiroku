@@ -2,18 +2,22 @@ import { allSubjects } from '../data/subjects'
 import { isTauri } from '../runtime'
 import { BackendError } from '../services/errors'
 import { invokeCmd } from '../services/tauri'
-import type { BangumiSubject, RelatedSubject } from '../types/anime'
+import type { BangumiSubject, CalendarDay, RelatedSubject } from '../types/anime'
 
 export interface BangumiApi {
   searchSubjects(query: string, signal?: AbortSignal): Promise<BangumiSubject[]>
   getSubject(id: number, signal?: AbortSignal): Promise<BangumiSubject | null>
   getSuggestions(signal?: AbortSignal): Promise<BangumiSubject[]>
   getRelations(id: number, signal?: AbortSignal): Promise<RelatedSubject[]>
+  getCalendar(signal?: AbortSignal): Promise<CalendarDay[]>
 }
 
 const SEARCH_DELAY = 350
 const DETAIL_DELAY = 180
 const SUGGEST_DELAY = 200
+const CALENDAR_DELAY = 300
+
+const WEEKDAY_LABELS = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
 
 function delay(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -94,6 +98,15 @@ const mockBangumiApi: BangumiApi = {
         relation: item.shared >= 2 ? '衍生' : '相同世界观',
         subject: cloneSubject(item.subject)
       }))
+  },
+
+  async getCalendar(signal) {
+    await delay(CALENDAR_DELAY, signal)
+    return WEEKDAY_LABELS.map((label, i) => ({
+      weekday: i + 1,
+      label,
+      items: allSubjects.filter((_, index) => index % 7 === i).map(cloneSubject)
+    }))
   }
 }
 
@@ -122,6 +135,10 @@ const tauriBangumiApi: BangumiApi = {
   async getRelations(id, signal) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     return invokeCmd<RelatedSubject[]>('get_subject_relations', { bangumiSubjectId: id })
+  },
+  async getCalendar(signal) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    return invokeCmd<CalendarDay[]>('get_calendar')
   }
 }
 

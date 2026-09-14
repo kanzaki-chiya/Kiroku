@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 use url::Url;
 
 use crate::error::AppError;
-use crate::models::{CommunityDto, RelatedSubjectDto, SubjectDto};
+use crate::models::{CalendarDayDto, CommunityDto, RelatedSubjectDto, SubjectDto};
 use crate::validate::now_iso;
 
 const BASE: &str = "https://api.bgm.tv";
@@ -126,6 +126,14 @@ impl BangumiClient {
             .await?;
         Ok(raw.into_iter().map(adapt_relation).collect())
     }
+
+    pub async fn get_calendar(&self) -> Result<Vec<CalendarDayDto>, AppError> {
+        let url = format!("{BASE}/calendar");
+        let raw: Vec<RawCalendarDay> = self
+            .request_json(reqwest::Method::GET, &url, None)
+            .await?;
+        Ok(raw.into_iter().map(adapt_calendar_day).collect())
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -204,6 +212,37 @@ struct RawRelation {
     name_cn: String,
     date: Option<String>,
     images: Option<RawImages>,
+    platform: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawCalendarDay {
+    weekday: Option<RawWeekday>,
+    #[serde(default)]
+    items: Vec<RawCalendarItem>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawWeekday {
+    id: Option<i64>,
+    cn: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawCalendarItem {
+    id: i64,
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    name_cn: String,
+    #[serde(default)]
+    summary: String,
+    air_date: Option<String>,
+    images: Option<RawImages>,
+    eps: Option<i64>,
+    eps_count: Option<i64>,
+    rating: Option<RawRating>,
+    rank: Option<i64>,
     platform: Option<String>,
 }
 
@@ -353,6 +392,49 @@ fn adapt_relation(raw: RawRelation) -> RelatedSubjectDto {
     }
 }
 
+fn adapt_calendar_day(day: RawCalendarDay) -> CalendarDayDto {
+    let (weekday, label) = day
+        .weekday
+        .map(|w| (w.id.unwrap_or(0), w.cn.unwrap_or_default()))
+        .unwrap_or((0, String::new()));
+    CalendarDayDto {
+        weekday,
+        label,
+        items: day.items.into_iter().map(adapt_calendar_item).collect(),
+    }
+}
+
+fn adapt_calendar_item(raw: RawCalendarItem) -> SubjectDto {
+    let fetched = now_iso();
+    let rating = raw.rating.unwrap_or(RawRating {
+        rank: raw.rank,
+        total: None,
+        score: None,
+    });
+    let votes = rating.total.unwrap_or(0);
+    SubjectDto {
+        id: raw.id,
+        name: raw.name.clone(),
+        name_cn: fallback_name(&raw.name_cn, &raw.name),
+        aliases: None,
+        summary: raw.summary,
+        cover_url: raw.images.as_ref().and_then(first_image).unwrap_or_default(),
+        cover_local_path: None,
+        year: parse_year(raw.air_date.as_deref()),
+        format: map_format(raw.platform.as_deref().unwrap_or("")),
+        episodes: raw.eps_count.or(raw.eps).unwrap_or(0),
+        studio: String::new(),
+        tags: Vec::new(),
+        community: CommunityDto {
+            score: normalize_score(rating.score, votes),
+            votes,
+            rank: normalize_rank(rating.rank),
+            fetched_at: Some(fetched),
+            status: Some("ok".into()),
+        },
+    }
+}
+
 fn first_image(images: &RawImages) -> Option<String> {
     images
         .large
@@ -360,6 +442,7 @@ fn first_image(images: &RawImages) -> Option<String> {
         .or_else(|| images.common.clone())
         .or_else(|| images.medium.clone())
         .or_else(|| images.small.clone())
+        .map(|url| url.replacen("http://", "https://", 1))
 }
 
 fn fallback_name(name_cn: &str, name: &str) -> String {

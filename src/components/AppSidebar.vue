@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { BarChart3, Library, Monitor, Moon, Settings, Sun } from 'lucide-vue-next'
+import { BarChart3, CalendarDays, Library, Monitor, Moon, Settings, Sun } from 'lucide-vue-next'
 import { isTauri } from '../runtime'
 import { themeMode, type ThemeMode } from '../services/theme'
 import { useLibraryStore } from '../stores/library'
@@ -66,6 +66,10 @@ const unassignedCount = computed(
         <Library :size="16" class="nav-icon" aria-hidden="true" />
         <span class="nav-label">我的番剧库</span>
         <span class="nav-count">{{ store.count }}</span>
+      </RouterLink>
+      <RouterLink to="/calendar" class="nav-item" active-class="is-active">
+        <CalendarDays :size="16" class="nav-icon" aria-hidden="true" />
+        <span class="nav-label">每日放送</span>
       </RouterLink>
       <RouterLink to="/insights" class="nav-item" active-class="is-active">
         <BarChart3 :size="16" class="nav-icon" aria-hidden="true" />
