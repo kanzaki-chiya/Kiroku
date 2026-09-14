@@ -25,11 +25,9 @@ describe('RatingForm', () => {
     const initial = emptyDraft()
     const wrapper = mountForm(initial)
 
-    const skipCheckbox = wrapper.find('input[type="checkbox"]')
-    ;(skipCheckbox.element as HTMLInputElement).checked = false
-    await skipCheckbox.trigger('change')
+    await wrapper.get('[role="switch"]').trigger('click')
     await scoreInput(wrapper).setValue('8.5')
-    await wrapper.findAll('select')[0].setValue('A')
+    await wrapper.get('[data-tier="A"]').trigger('click')
     await wrapper.get('[data-star-value="4.5"]').trigger('click')
     await wrapper.find('textarea').setValue('慢热但回味很长。')
 

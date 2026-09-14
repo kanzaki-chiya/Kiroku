@@ -9,8 +9,10 @@ import {
   type WatchStatus
 } from '../types/anime'
 import { cloneDraft, isValidDimension } from '../utils/draft'
-import { dimensionBand, dimensionLabels, statusLabels } from '../utils/format'
+import { dimensionBand, dimensionLabels, scoreBand, statusLabels } from '../utils/format'
+import SegmentedControl from './SegmentedControl.vue'
 import StarRatingInput from './StarRatingInput.vue'
+import TierRail from './TierRail.vue'
 
 const props = defineProps<{
   initial: PersonalDraft
@@ -41,6 +43,7 @@ const dimValues = reactive<Record<DimensionKey, number | null>>({
 
 const error = ref('')
 const submitting = ref(false)
+const dragging = ref(false)
 
 const initialSnapshot = JSON.stringify(cloneDraft(props.initial))
 
@@ -73,7 +76,19 @@ watch(
   }
 )
 
-const statuses: WatchStatus[] = ['completed', 'watching', 'planned']
+const statusOptions: { value: WatchStatus; label: string }[] = [
+  { value: 'planned', label: statusLabels.planned },
+  { value: 'watching', label: statusLabels.watching },
+  { value: 'completed', label: statusLabels.completed }
+]
+
+const fillPct = computed(() => (sliderValue(scoreInput.value) / 10) * 100)
+
+const band = computed(() => {
+  if (!scoreEnabled.value) return null
+  const value = parseLenient(scoreInput.value)
+  return value === null || value < 0 || value > 10 ? null : scoreBand(value)
+})
 
 function sliderValue(raw: string | number): number {
   const value = parseLenient(raw)
@@ -145,14 +160,34 @@ function onCancel() {
 
 <template>
   <form class="rating-form" @submit.prevent="onSubmit">
-    <fieldset class="field-group">
-      <legend class="group-title">总分</legend>
-      <div class="score-row">
-        <label class="check">
-          <input type="checkbox" :checked="!scoreEnabled" @change="toggleSkipScore" />
-          <span>暂不评分</span>
-        </label>
-        <template v-if="scoreEnabled">
+    <div class="field-group">
+      <div class="group-head">
+        <span class="group-title">总分</span>
+        <button
+          type="button"
+          class="skip-switch"
+          role="switch"
+          :aria-checked="!scoreEnabled"
+          @click="toggleSkipScore"
+        >
+          <span class="skip-text">暂不评分</span>
+          <span class="switch-track" aria-hidden="true"><span class="switch-knob" /></span>
+        </button>
+      </div>
+      <div class="score-body" :class="{ off: !scoreEnabled }">
+        <input
+          v-model="scoreInput"
+          class="score-number"
+          type="number"
+          min="0"
+          max="10"
+          step="0.1"
+          inputmode="decimal"
+          aria-label="总分（0–10）"
+          placeholder="–"
+          :disabled="!scoreEnabled"
+        />
+        <div class="score-slider">
           <input
             class="score-range"
             type="range"
@@ -160,41 +195,40 @@ function onCancel() {
             max="10"
             step="0.1"
             :value="sliderValue(scoreInput)"
+            :disabled="!scoreEnabled"
+            :class="{ dragging }"
+            :style="{ '--pos': `${fillPct}%` }"
             @input="scoreInput = ($event.target as HTMLInputElement).value"
+            @pointerdown="dragging = true"
+            @pointerup="dragging = false"
+            @pointercancel="dragging = false"
             aria-label="总分滑杆"
           />
-          <input
-            v-model="scoreInput"
-            class="field-input score-number"
-            type="number"
-            min="0"
-            max="10"
-            step="0.1"
-            inputmode="decimal"
-            aria-label="总分（0–10）"
-            placeholder="0–10"
-          />
-        </template>
-        <span v-else class="skip-note">这部作品暂时不打总分</span>
+          <div class="ticks" aria-hidden="true">
+            <span v-for="i in 11" :key="i" />
+          </div>
+          <div class="scale" aria-hidden="true">
+            <span class="lo">0</span>
+            <span class="mid">5</span>
+            <span class="hi">10</span>
+          </div>
+        </div>
+        <span class="band-slot">
+          <Transition name="band" mode="out-in">
+            <span v-if="band" :key="band.label" class="score-band" :style="{ color: band.color }">{{ band.label }}</span>
+          </Transition>
+        </span>
       </div>
-    </fieldset>
+    </div>
 
-    <div class="field-pair">
-      <label class="field-group as-label">
-        <span class="group-title">分档</span>
-        <select v-model="tier" class="field-select">
-          <option value="">未分档</option>
-          <option v-for="item in tiers" :key="item.id" :value="item.name">
-            {{ item.name }} · {{ item.description }}
-          </option>
-        </select>
-      </label>
-      <label class="field-group as-label">
-        <span class="group-title">状态</span>
-        <select v-model="status" class="field-select">
-          <option v-for="s in statuses" :key="s" :value="s">{{ statusLabels[s] }}</option>
-        </select>
-      </label>
+    <div class="field-group">
+      <span class="group-title">分档</span>
+      <TierRail v-model="tier" :tiers="tiers" />
+    </div>
+
+    <div class="field-group">
+      <span class="group-title">状态</span>
+      <SegmentedControl v-model="status" :options="statusOptions" aria-label="观看状态" />
     </div>
 
     <fieldset class="field-group">
@@ -202,7 +236,13 @@ function onCancel() {
       <div v-for="key in dimensionKeys" :key="key" class="dim-row">
         <span class="dim-label">{{ dimensionLabels[key] }}</span>
         <StarRatingInput v-model="dimValues[key]" :label="dimensionLabels[key]" />
-        <span class="dim-band">{{ dimValues[key] === null ? '未评' : dimensionBand(dimValues[key]) }}</span>
+        <span class="dim-band">
+          <Transition name="band" mode="out-in">
+            <span :key="dimValues[key] === null ? '未评' : dimensionBand(dimValues[key]!)">{{
+              dimValues[key] === null ? '未评' : dimensionBand(dimValues[key]!)
+            }}</span>
+          </Transition>
+        </span>
       </div>
     </fieldset>
 
@@ -269,46 +309,272 @@ function onCancel() {
   font-size: 12px;
 }
 
-.score-row {
+.group-head {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.check {
+.skip-switch {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 14px;
-  cursor: pointer;
+  gap: 8px;
+  border-radius: var(--radius-pill);
 }
 
-.skip-note {
-  font-size: 13px;
+.skip-text {
+  font-size: 12.5px;
   color: var(--muted);
 }
 
-.score-range {
-  flex: 1;
-  min-width: 160px;
-  accent-color: var(--brand);
+.switch-track {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  background: var(--fill-strong);
+  transition: background 200ms var(--ease-snap);
+}
+
+.switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-thumb), 0 1px 4px rgba(0, 0, 0, 0.16);
+  transition: transform 240ms var(--ease-spring);
+}
+
+.skip-switch[aria-checked='true'] .switch-track {
+  background: var(--brand);
+}
+
+.skip-switch[aria-checked='true'] .switch-knob {
+  transform: translateX(16px);
+}
+
+.skip-switch:hover .skip-text {
+  color: var(--text-soft);
+}
+
+.score-body {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  transition: opacity 200ms var(--ease-snap);
+}
+
+.score-body.off {
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .score-number {
-  width: 88px;
-  height: 44px;
+  width: 84px;
+  height: 58px;
+  flex-shrink: 0;
   text-align: center;
-  font-size: 22px;
+  font-size: 30px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
+  background: var(--fill);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  appearance: textfield;
+  -moz-appearance: textfield;
+  transition: background var(--motion-fast) var(--ease-snap),
+    border-color var(--motion-fast) var(--ease-snap),
+    box-shadow var(--motion-fast) var(--ease-snap);
 }
 
-.field-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+.score-number::-webkit-outer-spin-button,
+.score-number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.score-number:hover:not(:focus):not(:disabled) {
+  background: var(--fill-strong);
+}
+
+.score-number:focus {
+  background: var(--surface);
+  border-color: var(--brand);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.score-number::placeholder {
+  color: var(--muted);
+}
+
+.score-slider {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+@property --pos {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+.score-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  background: transparent;
+  transition: --pos 260ms var(--ease-snap);
+}
+
+.score-range.dragging {
+  transition: none;
+}
+
+.score-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--brand) var(--pos, 0%),
+    var(--fill-strong) var(--pos, 0%)
+  );
+}
+
+.score-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-thumb), 0 1px 5px rgba(0, 0, 0, 0.14);
+  cursor: grab;
+  transition: transform 140ms ease-out;
+}
+
+.score-range:hover::-webkit-slider-thumb {
+  transform: scale(1.08);
+}
+
+.score-range:active::-webkit-slider-thumb {
+  transform: scale(1.14);
+  cursor: grabbing;
+}
+
+.score-range::-moz-range-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--fill-strong);
+}
+
+.score-range::-moz-range-progress {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+}
+
+.score-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-thumb), 0 1px 5px rgba(0, 0, 0, 0.14);
+  cursor: grab;
+}
+
+.score-range:focus-visible {
+  outline: none;
+}
+
+.score-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: var(--shadow-thumb), var(--focus-ring);
+}
+
+.score-range:focus-visible::-moz-range-thumb {
+  box-shadow: var(--shadow-thumb), var(--focus-ring);
+}
+
+.ticks {
+  display: flex;
+  justify-content: space-between;
+  margin: 3px 11px 0;
+}
+
+.ticks span {
+  width: 1.5px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--border-strong);
+}
+
+.ticks span:first-child,
+.ticks span:last-child {
+  height: 6px;
+}
+
+.scale {
+  position: relative;
+  height: 15px;
+  margin: 0 11px;
+}
+
+.scale span {
+  position: absolute;
+  top: 0;
+  font-size: 10.5px;
+  color: var(--muted);
+  transform: translateX(-50%);
+}
+
+.scale .lo {
+  left: 0;
+}
+
+.scale .mid {
+  left: 50%;
+}
+
+.scale .hi {
+  left: 100%;
+}
+
+.band-slot {
+  width: 44px;
+  flex-shrink: 0;
+}
+
+.score-band {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.band-enter-active,
+.band-leave-active {
+  transition: opacity 180ms var(--ease-snap), transform 180ms var(--ease-snap);
+}
+
+.band-enter-from {
+  opacity: 0;
+  transform: translateY(5px);
+}
+
+.band-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
 }
 
 .dim-row {
@@ -332,6 +598,10 @@ function onCancel() {
   font-size: 12px;
   color: var(--muted);
   flex-shrink: 0;
+}
+
+.dim-band > span {
+  display: inline-block;
 }
 
 .review-area {
@@ -379,12 +649,14 @@ function onCancel() {
 }
 
 @media (max-width: 640px) {
-  .field-pair {
-    grid-template-columns: 1fr;
+  .score-body {
+    gap: 12px;
   }
 
-  .score-range {
-    min-width: 80px;
+  .score-number {
+    width: 68px;
+    height: 50px;
+    font-size: 24px;
   }
 }
 </style>

@@ -66,6 +66,21 @@ export function formatStars(value: number | null): string {
   return `${'★'.repeat(full)}${half ? '½' : ''}`
 }
 
+export interface ScoreBand {
+  label: string
+  color: string
+}
+
+export function scoreBand(value: number): ScoreBand {
+  if (value >= 9) return { label: '神作', color: '#a051d8' }
+  if (value >= 8) return { label: '顶级', color: '#c27d0a' }
+  if (value >= 7) return { label: '优秀', color: '#2f9e57' }
+  if (value >= 6) return { label: '不错', color: '#1a87e8' }
+  if (value >= 5) return { label: '普通', color: '#7d7d85' }
+  if (value >= 4) return { label: '较差', color: '#c26a33' }
+  return { label: '很差', color: '#cf4437' }
+}
+
 export function dimensionBand(value: number): string {
   if (value >= 4.5) return '顶级'
   if (value >= 3.5) return '优秀'

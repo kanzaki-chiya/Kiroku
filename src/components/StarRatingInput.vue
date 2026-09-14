@@ -120,6 +120,15 @@ function onHitClick(value: number, event: MouseEvent) {
   width: 22px;
   height: 22px;
   margin: 5px 3px;
+  transition: transform 160ms var(--ease-spring);
+}
+
+.star-unit:hover .star-visual {
+  transform: scale(1.14);
+}
+
+.star-unit:active .star-visual {
+  transform: scale(0.88);
 }
 
 .star-icon {
@@ -140,6 +149,7 @@ function onHitClick(value: number, event: MouseEvent) {
   inset: 0 auto 0 0;
   width: 0;
   overflow: hidden;
+  transition: width 180ms var(--ease-snap);
 }
 
 .star-visual[data-fill='half'] .star-clip {
