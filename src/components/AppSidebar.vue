@@ -29,6 +29,10 @@ const tierCounts = computed(() => {
   }
   return counts
 })
+
+const unassignedCount = computed(
+  () => store.entries.filter(entry => entry.personal.tier === null).length
+)
 </script>
 
 <template>
@@ -87,6 +91,17 @@ const tierCounts = computed(() => {
         <span class="tier-badge" :style="tierBadgeStyle(tier.color)">{{ tier.name }}</span>
         <span class="tier-desc">{{ tierDescription(tier.name, store.tiers) }}</span>
         <span class="tier-count">{{ tierCounts.get(tier.name) ?? 0 }}</span>
+      </RouterLink>
+      <RouterLink
+        :to="{ path: '/library', query: { tier: 'unassigned' } }"
+        class="tier-item"
+        :class="{ 'is-current': route.path === '/library' && viewState.filters.tier === 'unassigned' }"
+        :aria-current="route.path === '/library' && viewState.filters.tier === 'unassigned' ? 'true' : undefined"
+        @click="viewState.filters.tier = 'unassigned'"
+      >
+        <span class="tier-badge tier-none">—</span>
+        <span class="tier-desc">未分档</span>
+        <span class="tier-count">{{ unassignedCount }}</span>
       </RouterLink>
     </div>
 

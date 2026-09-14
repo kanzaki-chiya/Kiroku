@@ -41,8 +41,13 @@ watch(
 )
 
 const statusCounts = computed<Record<WatchStatus | 'all', number>>(() => {
-  const counts = { all: store.entries.length, completed: 0, watching: 0, planned: 0 }
-  for (const entry of store.entries) counts[entry.personal.status] += 1
+  const counts = { all: 0, completed: 0, watching: 0, planned: 0 }
+  const tier = filters.value.tier
+  for (const entry of store.entries) {
+    if (tier === 'unassigned' ? entry.personal.tier !== null : tier !== 'all' && entry.personal.tier !== tier) continue
+    counts.all += 1
+    counts[entry.personal.status] += 1
+  }
   return counts
 })
 
