@@ -84,10 +84,55 @@ const DEFAULT_TIERS: [(&str, &str, &str, i64); 5] = [
     ("D", "不太对味", "#8b6b63", 4),
 ];
 
+// v4：云同步（SYNC_DESIGN.md §3）。只增不改：新列 + 三张新表。
+const MIGRATION_V4: &str = r#"
+ALTER TABLE tiers ADD COLUMN sync_id TEXT;
+ALTER TABLE tiers ADD COLUMN server_version INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE personal_records ADD COLUMN server_version INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE sync_outbox (
+  op_id TEXT PRIMARY KEY,
+  seq INTEGER NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_key TEXT NOT NULL,
+  op_type TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  base_server_version INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT
+);
+CREATE INDEX sync_outbox_seq ON sync_outbox(seq);
+
+CREATE TABLE sync_conflicts (
+  entity_type TEXT NOT NULL,
+  entity_key TEXT NOT NULL,
+  local_payload_json TEXT,
+  remote_payload_json TEXT,
+  remote_server_version INTEGER,
+  detected_at TEXT NOT NULL,
+  PRIMARY KEY (entity_type, entity_key)
+);
+
+CREATE TABLE sync_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  account_id TEXT,
+  sync_enabled INTEGER NOT NULL DEFAULT 0,
+  device_id TEXT NOT NULL,
+  epoch INTEGER NOT NULL DEFAULT 0,
+  cursor INTEGER NOT NULL DEFAULT 0,
+  session_generation INTEGER NOT NULL DEFAULT 0,
+  outbox_seq INTEGER NOT NULL DEFAULT 0,
+  tier_order_server_version INTEGER NOT NULL DEFAULT 0,
+  reconcile_required INTEGER NOT NULL DEFAULT 0,
+  last_sync_at TEXT,
+  last_error TEXT
+);
+"#;
+
 pub fn open(path: &Path) -> Result<Connection, AppError> {
-    let conn = Connection::open(path).map_err(|err| {
-        AppError::startup(format!("无法打开数据库：{err}"))
-    })?;
+    let conn = Connection::open(path)
+        .map_err(|err| AppError::startup(format!("无法打开数据库：{err}")))?;
     conn.pragma_update(None, "foreign_keys", "ON")?;
     conn.pragma_update(None, "journal_mode", "WAL")?;
     conn.pragma_update(None, "busy_timeout", 5000)?;
@@ -150,6 +195,51 @@ fn migrate(conn: &Connection) -> Result<(), AppError> {
         )?;
         tx.commit()?;
     }
+    if current < 4 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(MIGRATION_V4)?;
+        backfill_tier_sync_ids(&tx)?;
+        tx.execute(
+            "INSERT INTO sync_state (id, device_id) VALUES (1, ?1)",
+            params![uuid::Uuid::new_v4().to_string()],
+        )?;
+        tx.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (4, ?1)",
+            params![now_iso()],
+        )?;
+        tx.commit()?;
+    }
+    Ok(())
+}
+
+// 内置分档按当前名称映射 builtin:<name>——用户在旧版可改内置名，名称比位置更可靠；
+// 改名不一致的多端会在首次合并时作为不同分档进冲突，而不是静默错配。
+fn backfill_tier_sync_ids(tx: &Transaction<'_>) -> Result<(), AppError> {
+    let mut stmt = tx.prepare("SELECT id, name, is_builtin FROM tiers")?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, i64>(2)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (id, name, is_builtin) in rows {
+        let sync_id = if is_builtin == 1 {
+            format!("builtin:{name}")
+        } else {
+            uuid::Uuid::new_v4().to_string()
+        };
+        tx.execute(
+            "UPDATE tiers SET sync_id = ?1 WHERE id = ?2",
+            params![sync_id, id],
+        )?;
+    }
+    tx.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS tiers_sync_id_unique ON tiers(sync_id)",
+        [],
+    )?;
     Ok(())
 }
 
@@ -195,15 +285,20 @@ fn tier_id_by_name(conn: &Connection, name: Option<&str>) -> Result<Option<i64>,
     let Some(name) = name else {
         return Ok(None);
     };
-    conn.query_row("SELECT id FROM tiers WHERE name = ?1", params![name], |row| {
-        row.get(0)
-    })
+    conn.query_row(
+        "SELECT id FROM tiers WHERE name = ?1",
+        params![name],
+        |row| row.get(0),
+    )
     .optional()?
     .ok_or_else(|| AppError::validation("无效的分档"))
     .map(Some)
 }
 
-pub fn save_tier(conn: &Connection, payload: crate::models::SaveTierPayload) -> Result<TierDto, AppError> {
+pub fn save_tier(
+    conn: &Connection,
+    payload: crate::models::SaveTierPayload,
+) -> Result<TierDto, AppError> {
     let name = payload.name.trim();
     if name.is_empty() || name.len() > 20 {
         return Err(AppError::validation("分档名称不能为空且不超过 20 字"));
@@ -231,10 +326,14 @@ pub fn save_tier(conn: &Connection, payload: crate::models::SaveTierPayload) -> 
         if exists == 0 {
             return Err(AppError::not_found("分档不存在"));
         }
-        conn.execute(
+        let tx = conn.unchecked_transaction()?;
+        tx.execute(
             "UPDATE tiers SET name = ?1, description = ?2, color = ?3 WHERE id = ?4",
             params![name, payload.description, payload.color, id],
         )?;
+        let (sync_payload, sync_id, base_version) = tier_sync_payload(&tx, id)?;
+        enqueue_sync_op(&tx, "tier", &sync_id, "upsert", &sync_payload, base_version)?;
+        tx.commit()?;
         get_tier(conn, id)
     } else {
         let next_order: i64 = conn.query_row(
@@ -242,11 +341,17 @@ pub fn save_tier(conn: &Connection, payload: crate::models::SaveTierPayload) -> 
             [],
             |row| row.get(0),
         )?;
-        conn.execute(
-            "INSERT INTO tiers (name, description, color, sort_order, is_builtin) VALUES (?1, ?2, ?3, ?4, 0)",
-            params![name, payload.description, payload.color, next_order],
+        let tx = conn.unchecked_transaction()?;
+        let sync_id = uuid::Uuid::new_v4().to_string();
+        tx.execute(
+            "INSERT INTO tiers (name, description, color, sort_order, is_builtin, sync_id) VALUES (?1, ?2, ?3, ?4, 0, ?5)",
+            params![name, payload.description, payload.color, next_order, sync_id],
         )?;
-        get_tier(conn, conn.last_insert_rowid())
+        let id = tx.last_insert_rowid();
+        let (sync_payload, _, base_version) = tier_sync_payload(&tx, id)?;
+        enqueue_sync_op(&tx, "tier", &sync_id, "upsert", &sync_payload, base_version)?;
+        tx.commit()?;
+        get_tier(conn, id)
     }
 }
 
@@ -283,6 +388,15 @@ pub fn reorder_tiers(conn: &Connection, ids: Vec<i64>) -> Result<Vec<TierDto>, A
             return Err(AppError::not_found("分档不存在"));
         }
     }
+    let (order_payload, order_base) = tier_order_payload(&tx)?;
+    enqueue_sync_op(
+        &tx,
+        "tier_order",
+        "tier_order",
+        "set",
+        &order_payload,
+        order_base,
+    )?;
     tx.commit()?;
     list_tiers(conn)
 }
@@ -296,25 +410,47 @@ pub fn delete_tier(conn: &Connection, id: i64) -> Result<(), AppError> {
     if referenced > 0 {
         return Err(AppError::conflict("该分档仍被收藏引用，请先迁移或取消关联"));
     }
-    let deleted = conn.execute("DELETE FROM tiers WHERE id = ?1 AND is_builtin = 0", params![id])?;
-    if deleted == 0 {
-        let builtin: i64 = conn
-            .query_row(
-                "SELECT is_builtin FROM tiers WHERE id = ?1",
-                params![id],
-                |row| row.get(0),
-            )
-            .optional()?
-            .unwrap_or(0);
-        if builtin == 1 {
-            return Err(AppError::conflict("内置分档不能删除"));
-        }
+    let meta = conn
+        .query_row(
+            "SELECT is_builtin, sync_id, server_version FROM tiers WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, i64>(2)?,
+                ))
+            },
+        )
+        .optional()?;
+    let Some((builtin, sync_id, server_version)) = meta else {
         return Err(AppError::not_found("分档不存在"));
+    };
+    if builtin == 1 {
+        return Err(AppError::conflict("内置分档不能删除"));
     }
+    let Some(sync_id) = sync_id else {
+        return Err(AppError::internal("分档缺少同步标识"));
+    };
+    let tx = conn.unchecked_transaction()?;
+    tx.execute("DELETE FROM tiers WHERE id = ?1", params![id])?;
+    enqueue_sync_op(
+        &tx,
+        "tier",
+        &sync_id,
+        "delete",
+        &serde_json::Value::Null,
+        server_version,
+    )?;
+    tx.commit()?;
     Ok(())
 }
 
-pub fn upsert_subject(tx: &Transaction<'_>, subject: &SubjectDto, fetched_at: &str) -> Result<i64, AppError> {
+pub fn upsert_subject(
+    tx: &Transaction<'_>,
+    subject: &SubjectDto,
+    fetched_at: &str,
+) -> Result<i64, AppError> {
     let aliases = serde_json::to_string(subject.aliases.as_ref().unwrap_or(&Vec::new()))?;
     let tags = serde_json::to_string(&subject.tags)?;
     tx.execute(
@@ -375,7 +511,11 @@ pub fn upsert_subject(tx: &Transaction<'_>, subject: &SubjectDto, fetched_at: &s
             comm_score,
             subject.community.votes,
             subject.community.rank,
-            subject.community.fetched_at.clone().unwrap_or_else(|| fetched_at.to_string()),
+            subject
+                .community
+                .fetched_at
+                .clone()
+                .unwrap_or_else(|| fetched_at.to_string()),
             subject
                 .community
                 .status
@@ -432,6 +572,15 @@ pub fn add_library_entry(
     )?;
     let record_id = tx.last_insert_rowid();
     insert_dimensions(&tx, record_id, draft)?;
+    let (sync_payload, base_version) = record_sync_payload(&tx, local_id)?;
+    enqueue_sync_op(
+        &tx,
+        "record",
+        &subject.id.to_string(),
+        "upsert",
+        &sync_payload,
+        base_version,
+    )?;
     tx.commit()?;
     get_library_entry_by_bangumi_id(conn, subject.id)?
         .ok_or_else(|| AppError::internal("写入后无法读取收藏"))
@@ -443,18 +592,34 @@ pub fn remove_library_entry(
 ) -> Result<Option<String>, AppError> {
     let row = conn
         .query_row(
-            "SELECT s.id, s.cover_local_path
+            "SELECT s.id, s.cover_local_path, p.server_version
              FROM subjects s
              JOIN personal_records p ON p.subject_id = s.id
              WHERE s.bangumi_subject_id = ?1",
             params![bangumi_subject_id],
-            |row| Ok((row.get::<_, i64>(0)?, row.get::<_, Option<String>>(1)?)),
+            |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, i64>(2)?,
+                ))
+            },
         )
         .optional()?;
-    let Some((local_id, cover_path)) = row else {
+    let Some((local_id, cover_path, server_version)) = row else {
         return Err(AppError::not_found("这部作品还没有收录"));
     };
-    conn.execute("DELETE FROM subjects WHERE id = ?1", params![local_id])?;
+    let tx = conn.unchecked_transaction()?;
+    tx.execute("DELETE FROM subjects WHERE id = ?1", params![local_id])?;
+    enqueue_sync_op(
+        &tx,
+        "record",
+        &bangumi_subject_id.to_string(),
+        "delete",
+        &serde_json::Value::Null,
+        server_version,
+    )?;
+    tx.commit()?;
     Ok(cover_path)
 }
 
@@ -483,7 +648,7 @@ pub fn update_personal_record(
             },
         )
         .optional()?;
-    let Some((record_id, current_version, _created_at, _subject_id)) = row else {
+    let Some((record_id, current_version, _created_at, subject_local_id)) = row else {
         return Err(AppError::not_found("这部作品还没有收录"));
     };
     if current_version != version {
@@ -506,6 +671,15 @@ pub fn update_personal_record(
         return Err(AppError::conflict("记录已被其他窗口修改，请刷新后重试"));
     }
     insert_dimensions(&tx, record_id, draft)?;
+    let (sync_payload, base_version) = record_sync_payload(&tx, subject_local_id)?;
+    enqueue_sync_op(
+        &tx,
+        "record",
+        &bangumi_subject_id.to_string(),
+        "upsert",
+        &sync_payload,
+        base_version,
+    )?;
     tx.commit()?;
     get_library_entry_by_bangumi_id(conn, bangumi_subject_id)?
         .ok_or_else(|| AppError::internal("更新后无法读取收藏"))
@@ -528,18 +702,18 @@ pub fn import_entries(
             review: item.personal.review.clone(),
         };
         crate::validate::validate_draft(&draft, &names)?;
-        let existing: Option<(i64, i64)> = tx
+        let existing: Option<(i64, i64, i64)> = tx
             .query_row(
-                "SELECT p.id, p.version
+                "SELECT p.id, p.version, s.id
                  FROM personal_records p
                  JOIN subjects s ON s.id = p.subject_id
                  WHERE s.bangumi_subject_id = ?1",
                 params![item.bangumi_subject_id],
-                |row| Ok((row.get(0)?, row.get(1)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
             )
             .optional()?;
         let now = now_iso();
-        if let Some((record_id, version)) = existing {
+        if let Some((record_id, version, subject_local_id)) = existing {
             if !overwrite {
                 continue;
             }
@@ -559,6 +733,15 @@ pub fn import_entries(
                 return Err(AppError::conflict("导入时记录版本冲突"));
             }
             insert_dimensions(&tx, record_id, &draft)?;
+            let (sync_payload, base_version) = record_sync_payload(&tx, subject_local_id)?;
+            enqueue_sync_op(
+                &tx,
+                "record",
+                &item.bangumi_subject_id.to_string(),
+                "upsert",
+                &sync_payload,
+                base_version,
+            )?;
         } else {
             let local_id = upsert_subject(&tx, &item.subject, &now)?;
             let tier_id = tier_id_by_name(&tx, draft.tier.as_deref())?;
@@ -573,6 +756,15 @@ pub fn import_entries(
             )?;
             let record_id = tx.last_insert_rowid();
             insert_dimensions(&tx, record_id, &draft)?;
+            let (sync_payload, base_version) = record_sync_payload(&tx, local_id)?;
+            enqueue_sync_op(
+                &tx,
+                "record",
+                &item.bangumi_subject_id.to_string(),
+                "upsert",
+                &sync_payload,
+                base_version,
+            )?;
         }
     }
     tx.commit()?;
@@ -748,9 +940,569 @@ pub fn delete_personal_data(conn: &mut Connection) -> Result<(), AppError> {
         "DELETE FROM dimension_scores;
          DELETE FROM personal_records;
          DELETE FROM community_snapshots;
-         DELETE FROM subjects;",
+         DELETE FROM subjects;
+         DELETE FROM sync_outbox;
+         DELETE FROM sync_conflicts;
+         UPDATE sync_state SET
+            account_id = NULL, sync_enabled = 0, epoch = 0, cursor = 0,
+            outbox_seq = 0, tier_order_server_version = 0,
+            reconcile_required = 0, last_sync_at = NULL, last_error = NULL;",
     )?;
     tx.commit()?;
+    Ok(())
+}
+
+// ---------- 云同步：outbox 与远端应用（SYNC_DESIGN.md §5/§6） ----------
+
+pub(crate) fn sync_is_enabled(conn: &Connection) -> Result<bool, AppError> {
+    let enabled: Option<i64> = conn
+        .query_row(
+            "SELECT sync_enabled FROM sync_state WHERE id = 1",
+            [],
+            |row| row.get(0),
+        )
+        .optional()?;
+    Ok(enabled == Some(1))
+}
+
+/// 业务写事务内调用；sync_enabled=0 时静默跳过（首次开启走全量合并，不靠存量 outbox）。
+pub(crate) fn enqueue_sync_op(
+    conn: &Connection,
+    entity_type: &str,
+    entity_key: &str,
+    op_type: &str,
+    payload: &serde_json::Value,
+    base_server_version: i64,
+) -> Result<(), AppError> {
+    if !sync_is_enabled(conn)? {
+        return Ok(());
+    }
+    enqueue_sync_op_force(
+        conn,
+        entity_type,
+        entity_key,
+        op_type,
+        payload,
+        base_server_version,
+    )
+}
+
+/// 不检查开关——首次合并/冲突解决时直接入队。
+pub(crate) fn enqueue_sync_op_force(
+    conn: &Connection,
+    entity_type: &str,
+    entity_key: &str,
+    op_type: &str,
+    payload: &serde_json::Value,
+    base_server_version: i64,
+) -> Result<(), AppError> {
+    let seq: i64 = conn.query_row(
+        "UPDATE sync_state SET outbox_seq = outbox_seq + 1 WHERE id = 1 RETURNING outbox_seq",
+        [],
+        |row| row.get(0),
+    )?;
+    conn.execute(
+        "INSERT INTO sync_outbox (op_id, seq, entity_type, entity_key, op_type, payload_json, base_server_version, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        params![
+            uuid::Uuid::new_v4().to_string(),
+            seq,
+            entity_type,
+            entity_key,
+            op_type,
+            serde_json::to_string(payload)?,
+            base_server_version,
+            now_iso()
+        ],
+    )?;
+    Ok(())
+}
+
+/// 同实体已有排队 op 时先清掉再入队（合并/冲突解决用，折叠为最新全量态）。
+pub(crate) fn enqueue_sync_op_replace(
+    conn: &Connection,
+    entity_type: &str,
+    entity_key: &str,
+    op_type: &str,
+    payload: &serde_json::Value,
+    base_server_version: i64,
+) -> Result<(), AppError> {
+    conn.execute(
+        "DELETE FROM sync_outbox WHERE entity_type = ?1 AND entity_key = ?2",
+        params![entity_type, entity_key],
+    )?;
+    enqueue_sync_op_force(
+        conn,
+        entity_type,
+        entity_key,
+        op_type,
+        payload,
+        base_server_version,
+    )
+}
+
+pub(crate) fn entity_has_pending_op(
+    conn: &Connection,
+    entity_type: &str,
+    entity_key: &str,
+) -> Result<bool, AppError> {
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM sync_outbox WHERE entity_type = ?1 AND entity_key = ?2",
+        params![entity_type, entity_key],
+        |row| row.get(0),
+    )?;
+    Ok(count > 0)
+}
+
+/// 组装 record 上行载荷（全量态）。返回 (payload, 当前 server_version)。
+pub(crate) fn record_sync_payload(
+    conn: &Connection,
+    local_subject_id: i64,
+) -> Result<(serde_json::Value, i64), AppError> {
+    let (record_id, score, tier_sync_id, status, review, progress, created_at, updated_at, server_version) =
+        conn.query_row(
+            "SELECT p.id, p.score, t.sync_id, p.status, p.review, p.progress, p.created_at, p.updated_at, p.server_version
+             FROM personal_records p
+             LEFT JOIN tiers t ON t.id = p.tier_id
+             WHERE p.subject_id = ?1",
+            params![local_subject_id],
+            |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, Option<i64>>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, Option<i64>>(5)?,
+                    row.get::<_, String>(6)?,
+                    row.get::<_, String>(7)?,
+                    row.get::<_, i64>(8)?,
+                ))
+            },
+        )?;
+    let mut stmt =
+        conn.prepare("SELECT dimension, score FROM dimension_scores WHERE record_id = ?1")?;
+    let dims = stmt
+        .query_map(params![record_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, Option<i64>>(1)?
+                    .map(serde_json::Value::from)
+                    .unwrap_or(serde_json::Value::Null),
+            ))
+        })?
+        .collect::<Result<serde_json::Map<String, serde_json::Value>, _>>()?;
+    let snapshot = conn.query_row(
+        "SELECT name, name_cn, aliases_json, summary, cover_url, year, format, episodes, studio, tags_json
+         FROM subjects WHERE id = ?1",
+        params![local_subject_id],
+        |row| {
+            Ok(serde_json::json!({
+                "name": row.get::<_, String>(0)?,
+                "name_cn": row.get::<_, String>(1)?,
+                "aliases": serde_json::from_str::<serde_json::Value>(&row.get::<_, String>(2)?).unwrap_or(serde_json::Value::Null),
+                "summary": row.get::<_, String>(3)?,
+                "cover_url": row.get::<_, String>(4)?,
+                "year": row.get::<_, i64>(5)?,
+                "format": row.get::<_, String>(6)?,
+                "episodes": row.get::<_, i64>(7)?,
+                "studio": row.get::<_, String>(8)?,
+                "tags": serde_json::from_str::<serde_json::Value>(&row.get::<_, String>(9)?).unwrap_or(serde_json::Value::Null),
+            }))
+        },
+    )?;
+    Ok((
+        serde_json::json!({
+            "record": {
+                "score": score,
+                "status": status,
+                "progress": progress,
+                "review": review,
+                "tier_sync_id": tier_sync_id,
+                "dimensions": dims,
+                "created_at": created_at,
+                "updated_at": updated_at,
+            },
+            "snapshot": snapshot,
+        }),
+        server_version,
+    ))
+}
+
+/// 组装 tier 上行载荷。返回 (payload, server_version)。
+pub(crate) fn tier_sync_payload(
+    conn: &Connection,
+    tier_id: i64,
+) -> Result<(serde_json::Value, String, i64), AppError> {
+    conn.query_row(
+        "SELECT name, description, color, is_builtin, sync_id, server_version FROM tiers WHERE id = ?1",
+        params![tier_id],
+        |row| {
+            Ok((
+                serde_json::json!({
+                    "name": row.get::<_, String>(0)?,
+                    "description": row.get::<_, String>(1)?,
+                    "color": row.get::<_, String>(2)?,
+                    "builtin": row.get::<_, i64>(3)? == 1,
+                }),
+                row.get::<_, Option<String>>(4)?.unwrap_or_default(),
+                row.get::<_, i64>(5)?,
+            ))
+        },
+    )
+    .map_err(AppError::from)
+}
+
+/// 组装 tier_order 上行载荷。返回 (payload, server_version)。
+pub(crate) fn tier_order_payload(conn: &Connection) -> Result<(serde_json::Value, i64), AppError> {
+    let mut stmt = conn.prepare("SELECT sync_id FROM tiers ORDER BY sort_order, id")?;
+    let keys = stmt
+        .query_map([], |row| row.get::<_, Option<String>>(0))?
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<String>>();
+    let version: i64 = conn.query_row(
+        "SELECT tier_order_server_version FROM sync_state WHERE id = 1",
+        [],
+        |row| row.get(0),
+    )?;
+    Ok((serde_json::json!({ "ordered_keys": keys }), version))
+}
+
+/// 写/更新冲突记录（同一实体重复冲突覆盖旧记录）。
+pub(crate) fn upsert_conflict(
+    conn: &Connection,
+    entity_type: &str,
+    entity_key: &str,
+    local_payload: Option<&serde_json::Value>,
+    remote_payload: Option<&serde_json::Value>,
+    remote_server_version: Option<i64>,
+) -> Result<(), AppError> {
+    conn.execute(
+        "INSERT INTO sync_conflicts (entity_type, entity_key, local_payload_json, remote_payload_json, remote_server_version, detected_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(entity_type, entity_key) DO UPDATE SET
+            local_payload_json = excluded.local_payload_json,
+            remote_payload_json = excluded.remote_payload_json,
+            remote_server_version = excluded.remote_server_version,
+            detected_at = excluded.detected_at",
+        params![
+            entity_type,
+            entity_key,
+            local_payload.map(serde_json::to_string).transpose()?,
+            remote_payload.map(serde_json::to_string).transpose()?,
+            remote_server_version,
+            now_iso()
+        ],
+    )?;
+    Ok(())
+}
+
+/// 远端 record.upsert 落地。本地有待传 op → 返回 false（由调用方记冲突）。
+/// 返回 Ok(true)=已应用。
+pub(crate) fn apply_remote_record_upsert(
+    conn: &Connection,
+    bangumi_subject_id: i64,
+    record: &serde_json::Value,
+    snapshot: Option<&serde_json::Value>,
+    server_version: i64,
+) -> Result<bool, AppError> {
+    if entity_has_pending_op(conn, "record", &bangumi_subject_id.to_string())? {
+        return Ok(false);
+    }
+    if let Some(snap) = snapshot {
+        upsert_subject_from_snapshot(conn, bangumi_subject_id, snap)?;
+    }
+    let local_id: Option<i64> = conn
+        .query_row(
+            "SELECT id FROM subjects WHERE bangumi_subject_id = ?1",
+            params![bangumi_subject_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    let Some(local_id) = local_id else {
+        return Err(AppError::internal("远端记录缺少可用资料快照"));
+    };
+    let tier_sync_id = record.get("tier_sync_id").and_then(|v| v.as_str());
+    let tier_id: Option<i64> = match tier_sync_id {
+        Some(key) => conn
+            .query_row(
+                "SELECT id FROM tiers WHERE sync_id = ?1",
+                params![key],
+                |row| row.get(0),
+            )
+            .optional()?,
+        None => None,
+    };
+    let exists: Option<i64> = conn
+        .query_row(
+            "SELECT id FROM personal_records WHERE subject_id = ?1",
+            params![local_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    let score = json_int(record.get("score"));
+    let progress = json_int(record.get("progress"));
+    let status = record
+        .get("status")
+        .and_then(|v| v.as_str())
+        .unwrap_or("planned");
+    let review = record.get("review").and_then(|v| v.as_str()).unwrap_or("");
+    let fallback_now = now_iso();
+    let created_at = record
+        .get("created_at")
+        .and_then(|v| v.as_str())
+        .unwrap_or(&fallback_now);
+    let updated_at = record
+        .get("updated_at")
+        .and_then(|v| v.as_str())
+        .unwrap_or(&fallback_now);
+    let record_id = match exists {
+        Some(id) => {
+            conn.execute(
+                "UPDATE personal_records
+                 SET score = ?1, tier_id = ?2, status = ?3, review = ?4, progress = ?5,
+                     created_at = ?6, updated_at = ?7, version = version + 1, server_version = ?8
+                 WHERE id = ?9",
+                params![
+                    score,
+                    tier_id,
+                    status,
+                    review,
+                    progress,
+                    created_at,
+                    updated_at,
+                    server_version,
+                    id
+                ],
+            )?;
+            id
+        }
+        None => {
+            conn.execute(
+                "INSERT INTO personal_records
+                    (subject_id, score, tier_id, status, review, progress, created_at, updated_at, version, server_version)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 1, ?9)",
+                params![local_id, score, tier_id, status, review, progress, created_at, updated_at, server_version],
+            )?;
+            conn.last_insert_rowid()
+        }
+    };
+    conn.execute(
+        "DELETE FROM dimension_scores WHERE record_id = ?1",
+        params![record_id],
+    )?;
+    if let Some(dims) = record.get("dimensions").and_then(|v| v.as_object()) {
+        for (dimension, value) in dims {
+            if !matches!(
+                dimension.as_str(),
+                "story" | "characters" | "direction" | "animation" | "music"
+            ) {
+                continue;
+            }
+            conn.execute(
+                "INSERT INTO dimension_scores (record_id, dimension, score) VALUES (?1, ?2, ?3)",
+                params![record_id, dimension, json_int(Some(value))],
+            )?;
+        }
+    }
+    Ok(true)
+}
+
+fn json_int(value: Option<&serde_json::Value>) -> Option<i64> {
+    value.and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f.round() as i64)))
+}
+
+/// 远端 record.delete 落地（物理删除，同本地语义）。
+pub(crate) fn apply_remote_record_delete(
+    conn: &Connection,
+    bangumi_subject_id: i64,
+) -> Result<bool, AppError> {
+    if entity_has_pending_op(conn, "record", &bangumi_subject_id.to_string())? {
+        return Ok(false);
+    }
+    let local_id: Option<i64> = conn
+        .query_row(
+            "SELECT id FROM subjects WHERE bangumi_subject_id = ?1",
+            params![bangumi_subject_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if let Some(local_id) = local_id {
+        conn.execute("DELETE FROM subjects WHERE id = ?1", params![local_id])?;
+    }
+    Ok(true)
+}
+
+/// 远端 tier.upsert 落地。名称与异 sync_id 分档撞名 → 也按冲突处理。
+pub(crate) fn apply_remote_tier_upsert(
+    conn: &Connection,
+    sync_id: &str,
+    payload: &serde_json::Value,
+    server_version: i64,
+) -> Result<bool, AppError> {
+    if entity_has_pending_op(conn, "tier", sync_id)? {
+        return Ok(false);
+    }
+    let name = payload.get("name").and_then(|v| v.as_str()).unwrap_or("");
+    let clash: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM tiers WHERE name = ?1 AND sync_id IS NOT ?2",
+        params![name, sync_id],
+        |row| row.get(0),
+    )?;
+    if clash > 0 {
+        return Ok(false);
+    }
+    let builtin = payload
+        .get("builtin")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let existing: Option<i64> = conn
+        .query_row(
+            "SELECT id FROM tiers WHERE sync_id = ?1",
+            params![sync_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    match existing {
+        Some(id) => {
+            conn.execute(
+                "UPDATE tiers SET name = ?1, description = ?2, color = ?3, server_version = ?4 WHERE id = ?5",
+                params![
+                    name,
+                    payload.get("description").and_then(|v| v.as_str()).unwrap_or(""),
+                    payload.get("color").and_then(|v| v.as_str()).unwrap_or("#335d4e"),
+                    server_version,
+                    id
+                ],
+            )?;
+        }
+        None => {
+            let next_order: i64 = conn.query_row(
+                "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM tiers",
+                [],
+                |row| row.get(0),
+            )?;
+            conn.execute(
+                "INSERT INTO tiers (name, description, color, sort_order, is_builtin, sync_id, server_version)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    name,
+                    payload.get("description").and_then(|v| v.as_str()).unwrap_or(""),
+                    payload.get("color").and_then(|v| v.as_str()).unwrap_or("#335d4e"),
+                    next_order,
+                    if builtin { 1 } else { 0 },
+                    sync_id,
+                    server_version
+                ],
+            )?;
+        }
+    }
+    Ok(true)
+}
+
+/// 远端 tier.delete 落地。仍有本地引用 → 冲突。
+pub(crate) fn apply_remote_tier_delete(conn: &Connection, sync_id: &str) -> Result<bool, AppError> {
+    if entity_has_pending_op(conn, "tier", sync_id)? {
+        return Ok(false);
+    }
+    let row: Option<(i64, i64)> = conn
+        .query_row(
+            "SELECT id, (SELECT COUNT(*) FROM personal_records WHERE tier_id = tiers.id) FROM tiers WHERE sync_id = ?1",
+            params![sync_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    let Some((tier_id, refs)) = row else {
+        return Ok(true); // 本地没有，视为已对齐
+    };
+    if refs > 0 {
+        return Ok(false);
+    }
+    conn.execute("DELETE FROM tiers WHERE id = ?1", params![tier_id])?;
+    Ok(true)
+}
+
+/// 远端 tier_order.set 落地：按 sync_id 列表重排，未知 key 忽略，未列出的排尾部。
+pub(crate) fn apply_remote_tier_order(
+    conn: &Connection,
+    ordered_keys: &[String],
+    server_version: i64,
+) -> Result<bool, AppError> {
+    if entity_has_pending_op(conn, "tier_order", "tier_order")? {
+        return Ok(false);
+    }
+    for (index, key) in ordered_keys.iter().enumerate() {
+        conn.execute(
+            "UPDATE tiers SET sort_order = ?1 WHERE sync_id = ?2",
+            params![index as i64, key],
+        )?;
+    }
+    let mut stmt = conn.prepare(
+        "SELECT id FROM tiers WHERE sync_id NOT IN (SELECT value FROM json_each(?1)) OR sync_id IS NULL ORDER BY sort_order, id",
+    )?;
+    let rest = stmt
+        .query_map(params![serde_json::to_string(ordered_keys)?], |row| {
+            row.get::<_, i64>(0)
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (offset, id) in rest.iter().enumerate() {
+        conn.execute(
+            "UPDATE tiers SET sort_order = ?1 WHERE id = ?2",
+            params![(ordered_keys.len() + offset) as i64, id],
+        )?;
+    }
+    conn.execute(
+        "UPDATE sync_state SET tier_order_server_version = ?1 WHERE id = 1",
+        params![server_version],
+    )?;
+    Ok(true)
+}
+
+fn upsert_subject_from_snapshot(
+    conn: &Connection,
+    bangumi_subject_id: i64,
+    snapshot: &serde_json::Value,
+) -> Result<(), AppError> {
+    let now = now_iso();
+    let text = |key: &str| {
+        snapshot
+            .get(key)
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string()
+    };
+    let num = |key: &str| snapshot.get(key).and_then(|v| v.as_i64()).unwrap_or(0);
+    conn.execute(
+        "INSERT INTO subjects (
+            bangumi_subject_id, name, name_cn, aliases_json, summary, cover_url,
+            year, format, episodes, studio, tags_json, metadata_fetched_at, created_at, updated_at
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL, ?12, ?12)
+         ON CONFLICT(bangumi_subject_id) DO NOTHING",
+        params![
+            bangumi_subject_id,
+            text("name"),
+            text("name_cn"),
+            snapshot
+                .get("aliases")
+                .map(|v| serde_json::to_string(v))
+                .transpose()?
+                .unwrap_or_else(|| "[]".into()),
+            text("summary"),
+            text("cover_url"),
+            num("year"),
+            text("format"),
+            num("episodes"),
+            text("studio"),
+            snapshot
+                .get("tags")
+                .map(|v| serde_json::to_string(v))
+                .transpose()?
+                .unwrap_or_else(|| "[]".into()),
+            now
+        ],
+    )?;
     Ok(())
 }
 
@@ -832,7 +1584,8 @@ mod tests {
         assert_eq!(updated.personal.dimensions.music, Some(4.5));
         assert_eq!(updated.personal.version, created.personal.version + 1);
         assert_eq!(updated.subject.name_cn, "作品");
-        let stale = update_personal_record(&mut conn, 2, &next, created.personal.version).unwrap_err();
+        let stale =
+            update_personal_record(&mut conn, 2, &next, created.personal.version).unwrap_err();
         assert_eq!(stale.code, "CONFLICT");
     }
 
@@ -969,6 +1722,122 @@ mod tests {
                 row.get(0)
             })
             .unwrap();
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
+    }
+
+    #[test]
+    fn migration_v4_creates_sync_tables_and_backfills_tier_sync_ids() {
+        let conn = open_memory().unwrap();
+        for table in ["sync_state", "sync_outbox", "sync_conflicts"] {
+            let n: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?1",
+                    params![table],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(n, 1, "缺表 {table}");
+        }
+        // 内置分档 sync_id 稳定回填
+        let builtin: String = conn
+            .query_row("SELECT sync_id FROM tiers WHERE name = 'S'", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(builtin, "builtin:S");
+        // 设备 id 与默认关闭同步
+        let (device_id, enabled): (String, i64) = conn
+            .query_row(
+                "SELECT device_id, sync_enabled FROM sync_state WHERE id = 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert!(!device_id.is_empty());
+        assert_eq!(enabled, 0);
+    }
+
+    #[test]
+    fn outbox_enqueues_and_commits_with_business_write() {
+        let mut conn = open_memory().unwrap();
+        conn.execute(
+            "UPDATE sync_state SET sync_enabled = 1, account_id = 'u1' WHERE id = 1",
+            [],
+        )
+        .unwrap();
+        add_library_entry(&mut conn, &subject(12), &draft(Some(8.0))).unwrap();
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM sync_outbox", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(n, 1);
+        let (entity, key, op): (String, String, String) = conn
+            .query_row(
+                "SELECT entity_type, entity_key, op_type FROM sync_outbox",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            (entity.as_str(), key.as_str(), op.as_str()),
+            ("record", "12", "upsert")
+        );
+        // 关闭同步后写操作不再入队
+        conn.execute("UPDATE sync_state SET sync_enabled = 0 WHERE id = 1", [])
+            .unwrap();
+        add_library_entry(&mut conn, &subject(34), &draft(Some(7.0))).unwrap();
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM sync_outbox", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(n, 1);
+        // 重复写入在事务外被拒绝，不产生 op
+        let _ = add_library_entry(&mut conn, &subject(12), &draft(Some(7.0)));
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM sync_outbox", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(n, 1);
+    }
+
+    #[test]
+    fn outbox_rolls_back_with_failed_write() {
+        let mut conn = open_memory().unwrap();
+        conn.execute(
+            "UPDATE sync_state SET sync_enabled = 1, account_id = 'u1' WHERE id = 1",
+            [],
+        )
+        .unwrap();
+        // 让事务内的 outbox INSERT 必败：业务写入必须一并回滚
+        conn.execute("ALTER TABLE sync_outbox RENAME TO sync_outbox_bak", [])
+            .unwrap();
+        let err = add_library_entry(&mut conn, &subject(56), &draft(Some(8.0)));
+        assert!(err.is_err());
+        let records: i64 = conn
+            .query_row("SELECT COUNT(*) FROM personal_records", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        let pending: i64 = conn
+            .query_row("SELECT COUNT(*) FROM sync_outbox_bak", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!((records, pending), (0, 0));
+    }
+
+    #[test]
+    fn remove_enqueues_delete_op() {
+        let mut conn = open_memory().unwrap();
+        add_library_entry(&mut conn, &subject(78), &draft(Some(8.0))).unwrap();
+        conn.execute(
+            "UPDATE sync_state SET sync_enabled = 1, account_id = 'u1' WHERE id = 1",
+            [],
+        )
+        .unwrap();
+        remove_library_entry(&conn, 78).unwrap();
+        let (op, key): (String, String) = conn
+            .query_row(
+                "SELECT op_type, entity_key FROM sync_outbox WHERE entity_type = 'record'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!((op.as_str(), key.as_str()), ("delete", "78"));
     }
 }

@@ -24,25 +24,37 @@ pub fn export_document(conn: &Connection) -> Result<BackupDocument, AppError> {
     })
 }
 
-pub fn preview_import(conn: &Connection, document: &BackupDocument) -> Result<ImportPreview, AppError> {
+pub fn preview_import(
+    conn: &Connection,
+    document: &BackupDocument,
+) -> Result<ImportPreview, AppError> {
     let document = normalize_document(document)?;
     preview_normalized(conn, &document)
 }
 
-pub fn import_document(conn: &mut Connection, payload: ImportPayload) -> Result<ImportPreview, AppError> {
+pub fn import_document(
+    conn: &mut Connection,
+    payload: ImportPayload,
+) -> Result<ImportPreview, AppError> {
     let document = normalize_document(&payload.document)?;
     let preview = preview_normalized(conn, &document)?;
     db::import_entries(conn, &document.entries, payload.overwrite)?;
     Ok(preview)
 }
 
-fn preview_normalized(conn: &Connection, document: &BackupDocument) -> Result<ImportPreview, AppError> {
+fn preview_normalized(
+    conn: &Connection,
+    document: &BackupDocument,
+) -> Result<ImportPreview, AppError> {
     let existing = db::list_library_entries(conn)?;
     let mut added = 0;
     let mut duplicates = 0;
     let mut conflicts = 0;
     for item in &document.entries {
-        match existing.iter().find(|entry| entry.subject.id == item.bangumi_subject_id) {
+        match existing
+            .iter()
+            .find(|entry| entry.subject.id == item.bangumi_subject_id)
+        {
             None => added += 1,
             Some(entry) => {
                 duplicates += 1;

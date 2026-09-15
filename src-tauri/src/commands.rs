@@ -1,9 +1,10 @@
 use std::fs;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use tauri::{AppHandle, Manager, State};
 
+use crate::auth::{self, Session};
 use crate::bangumi::BangumiClient;
 use crate::covers;
 use crate::db;
@@ -11,14 +12,18 @@ use crate::error::AppError;
 use crate::models::{
     AddEntryPayload, BackupDocument, BootstrapInfo, CalendarDayDto, ImportPayload, ImportPreview,
     LibraryEntryDto, ListLibraryQuery, ListLibraryResponse, RelatedSubjectDto, SaveTierPayload,
-    StatisticsDto, SubjectDto, TierDto, UpdateRecordPayload,
+    StatisticsDto, SubjectDto, SyncConflictDto, SyncLoginPayload, SyncResolvePayload,
+    SyncStatusDto, TierDto, UpdateRecordPayload,
 };
-use crate::{backup, stats};
+use crate::{backup, stats, sync};
 
 pub struct LiveState {
     pub db: Mutex<rusqlite::Connection>,
     pub data_dir: PathBuf,
     pub bangumi: BangumiClient,
+    pub http: reqwest::Client,
+    pub session: Mutex<Option<Session>>,
+    pub sync_notify: Arc<tokio::sync::Notify>,
 }
 
 pub struct AppState {
@@ -28,12 +33,7 @@ pub struct AppState {
 
 fn live(state: &AppState) -> Result<&LiveState, AppError> {
     state.ready.as_ref().ok_or_else(|| {
-        AppError::startup(
-            state
-                .error
-                .clone()
-                .unwrap_or_else(|| "应用启动失败".into()),
-        )
+        AppError::startup(state.error.clone().unwrap_or_else(|| "应用启动失败".into()))
     })
 }
 
@@ -43,12 +43,22 @@ fn lock_db(live: &LiveState) -> Result<std::sync::MutexGuard<'_, rusqlite::Conne
         .map_err(|_| AppError::internal("数据库锁失效"))
 }
 
+/// 写操作后唤起同步 worker（未开启同步时 worker 自检即退，代价为零）。
+fn kick_sync(live: &LiveState) {
+    live.sync_notify.notify_one();
+}
+
 #[tauri::command]
 pub fn bootstrap(state: State<AppState>) -> Result<BootstrapInfo, AppError> {
     let live = live(&state)?;
     Ok(BootstrapInfo {
         data_dir: live.data_dir.to_string_lossy().into(),
-        log_path: live.data_dir.join("logs").join("kiroku.log").to_string_lossy().into(),
+        log_path: live
+            .data_dir
+            .join("logs")
+            .join("kiroku.log")
+            .to_string_lossy()
+            .into(),
         db_path: live.data_dir.join("kiroku.db").to_string_lossy().into(),
     })
 }
@@ -73,7 +83,11 @@ pub fn list_library(
     );
     let total = items.len() as i64;
     let offset = query.offset.max(0) as usize;
-    let limit = if query.limit <= 0 { 500 } else { query.limit as usize };
+    let limit = if query.limit <= 0 {
+        500
+    } else {
+        query.limit as usize
+    };
     let items = items.into_iter().skip(offset).take(limit).collect();
     Ok(ListLibraryResponse { items, total })
 }
@@ -100,6 +114,7 @@ pub fn add_library_entry(
         let mut conn = lock_db(live)?;
         db::add_library_entry(&mut conn, &payload.subject, &payload.draft)?
     };
+    kick_sync(live);
     spawn_cover_download(
         app,
         live.data_dir.clone(),
@@ -120,12 +135,15 @@ pub fn update_personal_record(
 ) -> Result<LibraryEntryDto, AppError> {
     let live = live(&state)?;
     let mut conn = lock_db(live)?;
-    db::update_personal_record(
+    let entry = db::update_personal_record(
         &mut conn,
         payload.bangumi_subject_id,
         &payload.draft,
         payload.version,
-    )
+    )?;
+    drop(conn);
+    kick_sync(live);
+    Ok(entry)
 }
 
 #[tauri::command]
@@ -138,6 +156,7 @@ pub fn remove_library_entry(
         let conn = lock_db(live)?;
         db::remove_library_entry(&conn, bangumi_subject_id)?
     };
+    kick_sync(live);
     if let Some(relative) = cover_path {
         let path = live.data_dir.join(&relative);
         if let Err(err) = fs::remove_file(&path) {
@@ -160,21 +179,30 @@ pub fn list_tiers(state: State<AppState>) -> Result<Vec<TierDto>, AppError> {
 pub fn save_tier(state: State<AppState>, payload: SaveTierPayload) -> Result<TierDto, AppError> {
     let live = live(&state)?;
     let conn = lock_db(live)?;
-    db::save_tier(&conn, payload)
+    let tier = db::save_tier(&conn, payload)?;
+    drop(conn);
+    kick_sync(live);
+    Ok(tier)
 }
 
 #[tauri::command]
 pub fn reorder_tiers(state: State<AppState>, ids: Vec<i64>) -> Result<Vec<TierDto>, AppError> {
     let live = live(&state)?;
     let conn = lock_db(live)?;
-    db::reorder_tiers(&conn, ids)
+    let tiers = db::reorder_tiers(&conn, ids)?;
+    drop(conn);
+    kick_sync(live);
+    Ok(tiers)
 }
 
 #[tauri::command]
 pub fn delete_tier(state: State<AppState>, id: i64) -> Result<(), AppError> {
     let live = live(&state)?;
     let conn = lock_db(live)?;
-    db::delete_tier(&conn, id)
+    db::delete_tier(&conn, id)?;
+    drop(conn);
+    kick_sync(live);
+    Ok(())
 }
 
 #[tauri::command]
@@ -187,7 +215,10 @@ pub async fn search_subjects(
 }
 
 #[tauri::command]
-pub async fn get_subject(state: State<'_, AppState>, bangumi_subject_id: i64) -> Result<SubjectDto, AppError> {
+pub async fn get_subject(
+    state: State<'_, AppState>,
+    bangumi_subject_id: i64,
+) -> Result<SubjectDto, AppError> {
     let live = live(&state)?;
     let subject = live.bangumi.get_subject(bangumi_subject_id).await?;
     if let Err(err) = remember_recent(&state, &subject) {
@@ -268,17 +299,26 @@ pub fn export_backup(state: State<AppState>) -> Result<BackupDocument, AppError>
 }
 
 #[tauri::command]
-pub fn preview_import(state: State<AppState>, document: BackupDocument) -> Result<ImportPreview, AppError> {
+pub fn preview_import(
+    state: State<AppState>,
+    document: BackupDocument,
+) -> Result<ImportPreview, AppError> {
     let live = live(&state)?;
     let conn = lock_db(live)?;
     backup::preview_import(&conn, &document)
 }
 
 #[tauri::command]
-pub fn import_backup(state: State<AppState>, payload: ImportPayload) -> Result<ImportPreview, AppError> {
+pub fn import_backup(
+    state: State<AppState>,
+    payload: ImportPayload,
+) -> Result<ImportPreview, AppError> {
     let live = live(&state)?;
     let mut conn = lock_db(live)?;
-    backup::import_document(&mut conn, payload)
+    let preview = backup::import_document(&mut conn, payload)?;
+    drop(conn);
+    kick_sync(live);
+    Ok(preview)
 }
 
 #[tauri::command]
@@ -300,12 +340,141 @@ pub async fn delete_personal_data(state: State<'_, AppState>) -> Result<(), AppE
     covers::clear_cover_cache(&live.data_dir).await
 }
 
+// ---------- 云同步命令（SYNC_DESIGN.md） ----------
+
+#[tauri::command]
+pub async fn sync_login(
+    state: State<'_, AppState>,
+    payload: SyncLoginPayload,
+) -> Result<SyncStatusDto, AppError> {
+    let live = live(&state)?;
+    let session = auth::login(
+        &live.http,
+        &live.data_dir,
+        &payload.email,
+        &payload.password,
+    )
+    .await?;
+    if let Err(err) = sync::bind_account(live, &session.user_id) {
+        auth::logout(&live.http, &live.data_dir, Some(session)).await;
+        return Err(err);
+    }
+    if let Ok(mut slot) = live.session.lock() {
+        *slot = Some(session);
+    }
+    kick_sync(live);
+    sync::status(live)
+}
+
+#[tauri::command]
+pub async fn sync_logout(state: State<'_, AppState>) -> Result<SyncStatusDto, AppError> {
+    let live = live(&state)?;
+    let session = live.session.lock().ok().and_then(|mut slot| slot.take());
+    auth::logout(&live.http, &live.data_dir, session).await;
+    sync::bump_session_generation(live)?;
+    sync::status(live)
+}
+
+#[tauri::command]
+pub async fn sync_status(state: State<'_, AppState>) -> Result<SyncStatusDto, AppError> {
+    let live = live(&state)?;
+    let mut status = sync::status(live)?;
+    if status.logged_in {
+        // 会员信息是只读查询；离线/失败时保持 None，不影响其余字段
+        if let Ok(ent) = sync::get_entitlement(live).await {
+            status.member_active = ent.get("member_active").and_then(|v| v.as_bool());
+            status.expires_at = ent
+                .get("expires_at")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            status.in_retention = ent.get("in_retention").and_then(|v| v.as_bool());
+        }
+    }
+    Ok(status)
+}
+
+#[tauri::command]
+pub async fn sync_set_enabled(
+    state: State<'_, AppState>,
+    enabled: bool,
+) -> Result<SyncStatusDto, AppError> {
+    let live = live(&state)?;
+    if enabled {
+        sync::initial_enable(live).await?; // 有冲突时返回 Ok 但 sync_enabled 仍为 0
+    } else {
+        sync::set_sync_enabled(live, false)?;
+    }
+    kick_sync(live);
+    sync::status(live)
+}
+
+#[tauri::command]
+pub async fn sync_now(state: State<'_, AppState>) -> Result<SyncStatusDto, AppError> {
+    let live = live(&state)?;
+    sync::run_once(live).await?;
+    sync::status(live)
+}
+
+#[tauri::command]
+pub async fn sync_redeem_code(
+    state: State<'_, AppState>,
+    code: String,
+) -> Result<serde_json::Value, AppError> {
+    let live = live(&state)?;
+    sync::redeem(live, &code).await
+}
+
+#[tauri::command]
+pub fn sync_list_conflicts(state: State<AppState>) -> Result<Vec<SyncConflictDto>, AppError> {
+    let live = live(&state)?;
+    sync::list_conflicts(live)
+}
+
+#[tauri::command]
+pub async fn sync_resolve_conflict(
+    state: State<'_, AppState>,
+    payload: SyncResolvePayload,
+) -> Result<SyncStatusDto, AppError> {
+    let live = live(&state)?;
+    sync::resolve_conflict(
+        live,
+        &payload.entity_type,
+        &payload.entity_key,
+        &payload.keep,
+    )?;
+    kick_sync(live);
+    sync::status(live)
+}
+
+#[tauri::command]
+pub async fn sync_reconcile(
+    state: State<'_, AppState>,
+    mode: String,
+) -> Result<SyncStatusDto, AppError> {
+    let live = live(&state)?;
+    sync::reconcile(live, &mode).await?;
+    sync::status(live)
+}
+
+#[tauri::command]
+pub async fn sync_delete_cloud_library(
+    state: State<'_, AppState>,
+    confirm: String,
+) -> Result<SyncStatusDto, AppError> {
+    let live = live(&state)?;
+    sync::delete_cloud(live, &confirm).await?;
+    sync::status(live)
+}
+
 #[tauri::command]
 pub fn snapshot_database(state: State<AppState>) -> Result<String, AppError> {
     let live = live(&state)?;
     let dest_dir = live.data_dir.join("backups");
     fs::create_dir_all(&dest_dir)?;
-    let dest = dest_dir.join(format!("kiroku-{}.db", crate::validate::now_iso().replace(':', "-")));
+    let dest = dest_dir.join(format!(
+        "kiroku-{}.db",
+        crate::validate::now_iso().replace(':', "-")
+    ));
     let conn = lock_db(live)?;
     db::backup_to_file(&conn, &dest)?;
     Ok(dest.to_string_lossy().into())
@@ -387,9 +556,43 @@ fn init_live(app: &AppHandle) -> Result<LiveState, AppError> {
     let db_path = data_dir.join("kiroku.db");
     let conn = db::open(&db_path)?;
     log::info!("database ready at {}", db_path.display());
+    let http = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .map_err(|err| AppError::startup(format!("无法创建网络客户端：{err}")))?;
+    let session = auth::load_session(&data_dir);
     Ok(LiveState {
         db: Mutex::new(conn),
         data_dir,
         bangumi: BangumiClient::new()?,
+        http,
+        session: Mutex::new(session),
+        sync_notify: Arc::new(tokio::sync::Notify::new()),
     })
+}
+
+/// 同步 worker：事件触发 + 15 分钟兜底轮询（SYNC_DESIGN §9）。
+/// 本地写永远先行，worker 失败只记 last_error。
+pub fn spawn_sync_worker(app: &AppHandle) {
+    let handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(900));
+        interval.tick().await; // 首次 tick 立即触发（启动时推一轮）
+        loop {
+            let state = handle.state::<AppState>();
+            if let Ok(live) = live(&state) {
+                if let Err(err) = sync::run_once(live).await {
+                    log::warn!("同步失败：{}", err.message);
+                }
+                let notify = live.sync_notify.clone();
+                drop(state);
+                tokio::select! {
+                    _ = interval.tick() => {}
+                    _ = notify.notified() => {}
+                }
+            } else {
+                interval.tick().await;
+            }
+        }
+    });
 }

@@ -26,10 +26,7 @@ pub struct BangumiClient {
 impl BangumiClient {
     pub fn new() -> Result<Self, AppError> {
         let mut headers = HeaderMap::new();
-        headers.insert(
-            USER_AGENT,
-            HeaderValue::from_static(USER_AGENT_VALUE),
-        );
+        headers.insert(USER_AGENT, HeaderValue::from_static(USER_AGENT_VALUE));
         headers.insert("Accept", HeaderValue::from_static("application/json"));
         let http = reqwest::Client::builder()
             .default_headers(headers)
@@ -42,7 +39,6 @@ impl BangumiClient {
             last_request: Arc::new(Mutex::new(None)),
         })
     }
-
 
     async fn throttle(&self) {
         let mut last = self.last_request.lock().await;
@@ -113,25 +109,19 @@ impl BangumiClient {
 
     pub async fn get_subject(&self, id: i64) -> Result<SubjectDto, AppError> {
         let url = format!("{BASE}/v0/subjects/{id}");
-        let raw: RawSubject = self
-            .request_json(reqwest::Method::GET, &url, None)
-            .await?;
+        let raw: RawSubject = self.request_json(reqwest::Method::GET, &url, None).await?;
         Ok(adapt_subject(raw))
     }
 
     pub async fn get_relations(&self, id: i64) -> Result<Vec<RelatedSubjectDto>, AppError> {
         let url = format!("{BASE}/v0/subjects/{id}/subjects");
-        let raw: Vec<RawRelation> = self
-            .request_json(reqwest::Method::GET, &url, None)
-            .await?;
+        let raw: Vec<RawRelation> = self.request_json(reqwest::Method::GET, &url, None).await?;
         Ok(raw.into_iter().map(adapt_relation).collect())
     }
 
     pub async fn get_calendar(&self) -> Result<Vec<CalendarDayDto>, AppError> {
         let url = format!("{BASE}/calendar");
-        let raw: Vec<RawCalendarDay> = self
-            .request_json(reqwest::Method::GET, &url, None)
-            .await?;
+        let raw: Vec<RawCalendarDay> = self.request_json(reqwest::Method::GET, &url, None).await?;
         Ok(raw.into_iter().map(adapt_calendar_day).collect())
     }
 }
@@ -321,18 +311,18 @@ fn adapt_subject(raw: RawSubject) -> SubjectDto {
     } else {
         "ok"
     };
-    let mut tags: Vec<String> = raw
-        .tags
-        .into_iter()
-        .filter_map(|tag| tag.name)
-        .collect();
+    let mut tags: Vec<String> = raw.tags.into_iter().filter_map(|tag| tag.name).collect();
     for tag in raw.meta_tags {
         if !tags.contains(&tag) {
             tags.push(tag);
         }
     }
     tags.truncate(16);
-    let cover = raw.images.as_ref().and_then(first_image).unwrap_or_default();
+    let cover = raw
+        .images
+        .as_ref()
+        .and_then(first_image)
+        .unwrap_or_default();
     let episodes = if raw.total_episodes > 0 {
         raw.total_episodes
     } else {
@@ -374,7 +364,11 @@ fn adapt_relation(raw: RawRelation) -> RelatedSubjectDto {
             name_cn: fallback_name(&raw.name_cn, &raw.name),
             aliases: None,
             summary: String::new(),
-            cover_url: raw.images.as_ref().and_then(first_image).unwrap_or_default(),
+            cover_url: raw
+                .images
+                .as_ref()
+                .and_then(first_image)
+                .unwrap_or_default(),
             cover_local_path: None,
             year: parse_year(raw.date.as_deref()),
             format: map_format(raw.platform.as_deref().unwrap_or("")),
@@ -418,7 +412,11 @@ fn adapt_calendar_item(raw: RawCalendarItem) -> SubjectDto {
         name_cn: fallback_name(&raw.name_cn, &raw.name),
         aliases: None,
         summary: raw.summary,
-        cover_url: raw.images.as_ref().and_then(first_image).unwrap_or_default(),
+        cover_url: raw
+            .images
+            .as_ref()
+            .and_then(first_image)
+            .unwrap_or_default(),
         cover_local_path: None,
         year: parse_year(raw.air_date.as_deref()),
         format: map_format(raw.platform.as_deref().unwrap_or("")),

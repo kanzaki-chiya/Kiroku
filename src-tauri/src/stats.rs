@@ -31,7 +31,11 @@ pub fn calculate_statistics(entries: &[LibraryEntryDto]) -> StatisticsDto {
         })
         .collect();
     differences.sort_by(|a, b| {
-        let abs = b.delta.abs().partial_cmp(&a.delta.abs()).unwrap_or(std::cmp::Ordering::Equal);
+        let abs = b
+            .delta
+            .abs()
+            .partial_cmp(&a.delta.abs())
+            .unwrap_or(std::cmp::Ordering::Equal);
         if abs != std::cmp::Ordering::Equal {
             return abs;
         }
@@ -104,7 +108,12 @@ pub fn calculate_statistics(entries: &[LibraryEntryDto]) -> StatisticsDto {
                 .map(|entry| entry.subject.community.score.unwrap())
                 .collect::<Vec<_>>(),
         ),
-        mean_difference: mean(&differences.iter().map(|item| item.delta).collect::<Vec<_>>()),
+        mean_difference: mean(
+            &differences
+                .iter()
+                .map(|item| item.delta)
+                .collect::<Vec<_>>(),
+        ),
         highest: highest_list.first().cloned().cloned(),
         differences,
         bins,
@@ -160,11 +169,9 @@ pub fn filter_entries(
     entries.sort_by(|a, b| {
         let result = match sort {
             "personal" => compare_opt_f64(a.personal.score, b.personal.score, dir),
-            "community" => compare_opt_f64(
-                a.subject.community.score,
-                b.subject.community.score,
-                dir,
-            ),
+            "community" => {
+                compare_opt_f64(a.subject.community.score, b.subject.community.score, dir)
+            }
             "title" => a
                 .subject
                 .name_cn
@@ -257,7 +264,11 @@ mod tests {
 
     #[test]
     fn matches_frontend_fixture() {
-        let mut entries = vec![entry(1, Some(8.0), Some(7.0)), entry(2, Some(6.0), Some(8.0)), entry(3, None, Some(9.0))];
+        let mut entries = vec![
+            entry(1, Some(8.0), Some(7.0)),
+            entry(2, Some(6.0), Some(8.0)),
+            entry(3, None, Some(9.0)),
+        ];
         entries[0].personal.dimensions = DimensionsDto {
             story: Some(4.0),
             characters: Some(0.0),
@@ -290,15 +301,28 @@ mod tests {
         assert_eq!(stats.community_mean, Some(8.0));
         assert_eq!(stats.mean_difference, Some(-0.5));
         assert_eq!(stats.highest.as_ref().unwrap().personal.score, Some(8.0));
-        assert_eq!(stats.differences.iter().map(|d| d.delta).collect::<Vec<_>>(), vec![-2.0, 1.0]);
-        assert_eq!(stats.bins.iter().map(|b| b.count).collect::<Vec<_>>(), vec![0, 1, 0, 1, 0]);
-        assert_eq!(serde_json::to_value(&stats).unwrap()["dimensions"], serde_json::json!([
-            {"key":"story","mean":3.5,"count":2},
-            {"key":"characters","mean":2.0,"count":2},
-            {"key":"direction","mean":null,"count":0},
-            {"key":"animation","mean":4.5,"count":3},
-            {"key":"music","mean":0.5,"count":1}
-        ]));
+        assert_eq!(
+            stats
+                .differences
+                .iter()
+                .map(|d| d.delta)
+                .collect::<Vec<_>>(),
+            vec![-2.0, 1.0]
+        );
+        assert_eq!(
+            stats.bins.iter().map(|b| b.count).collect::<Vec<_>>(),
+            vec![0, 1, 0, 1, 0]
+        );
+        assert_eq!(
+            serde_json::to_value(&stats).unwrap()["dimensions"],
+            serde_json::json!([
+                {"key":"story","mean":3.5,"count":2},
+                {"key":"characters","mean":2.0,"count":2},
+                {"key":"direction","mean":null,"count":0},
+                {"key":"animation","mean":4.5,"count":3},
+                {"key":"music","mean":0.5,"count":1}
+            ])
+        );
     }
 
     #[test]
@@ -340,22 +364,35 @@ mod tests {
             music: None,
         };
         let stats = calculate_statistics(&entries);
-        assert_eq!(serde_json::to_value(&stats).unwrap()["dimensions"], serde_json::json!([
-            {"key":"story","mean":0.0,"count":1},
-            {"key":"characters","mean":0.75,"count":2},
-            {"key":"direction","mean":null,"count":0},
-            {"key":"animation","mean":5.0,"count":1},
-            {"key":"music","mean":null,"count":0}
-        ]));
+        assert_eq!(
+            serde_json::to_value(&stats).unwrap()["dimensions"],
+            serde_json::json!([
+                {"key":"story","mean":0.0,"count":1},
+                {"key":"characters","mean":0.75,"count":2},
+                {"key":"direction","mean":null,"count":0},
+                {"key":"animation","mean":5.0,"count":1},
+                {"key":"music","mean":null,"count":0}
+            ])
+        );
         assert_eq!(stats.rated_count, 0);
     }
 
     #[test]
     fn null_scores_stay_last_in_both_directions() {
-        let entries = vec![entry(1, None, None), entry(2, Some(8.0), None), entry(3, Some(6.0), None)];
+        let entries = vec![
+            entry(1, None, None),
+            entry(2, Some(8.0), None),
+            entry(3, Some(6.0), None),
+        ];
         let desc = filter_entries(entries.clone(), "", "all", "all", None, "personal", "desc");
-        assert_eq!(desc.iter().map(|e| e.subject.id).collect::<Vec<_>>(), vec![2, 3, 1]);
+        assert_eq!(
+            desc.iter().map(|e| e.subject.id).collect::<Vec<_>>(),
+            vec![2, 3, 1]
+        );
         let asc = filter_entries(entries, "", "all", "all", None, "personal", "asc");
-        assert_eq!(asc.iter().map(|e| e.subject.id).collect::<Vec<_>>(), vec![3, 2, 1]);
+        assert_eq!(
+            asc.iter().map(|e| e.subject.id).collect::<Vec<_>>(),
+            vec![3, 2, 1]
+        );
     }
 }

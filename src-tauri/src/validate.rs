@@ -18,15 +18,11 @@ pub fn score_to_tenths(value: f64, label: &str) -> Result<i64, AppError> {
 
 pub fn dimension_to_tenths(value: f64) -> Result<i64, AppError> {
     if !value.is_finite() || !(0.5..=5.0).contains(&value) {
-        return Err(AppError::validation(
-            "维度评分必须是 0.5–5 之间的半星步进",
-        ));
+        return Err(AppError::validation("维度评分必须是 0.5–5 之间的半星步进"));
     }
     let tenths = (value * 10.0).round() as i64;
     if tenths % 5 != 0 {
-        return Err(AppError::validation(
-            "维度评分必须是 0.5–5 之间的半星步进",
-        ));
+        return Err(AppError::validation("维度评分必须是 0.5–5 之间的半星步进"));
     }
     Ok(tenths)
 }

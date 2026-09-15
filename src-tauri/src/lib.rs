@@ -1,3 +1,4 @@
+mod auth;
 mod backup;
 mod bangumi;
 mod commands;
@@ -6,6 +7,7 @@ mod db;
 mod error;
 mod models;
 mod stats;
+mod sync;
 mod validate;
 
 use tauri::Manager;
@@ -24,6 +26,7 @@ pub fn run() {
         .setup(|app| {
             let state = commands::init_state(app.handle());
             app.manage(state);
+            commands::spawn_sync_worker(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -50,9 +53,17 @@ pub fn run() {
             commands::clear_cover_cache,
             commands::delete_personal_data,
             commands::snapshot_database,
+            commands::sync_login,
+            commands::sync_logout,
+            commands::sync_status,
+            commands::sync_set_enabled,
+            commands::sync_now,
+            commands::sync_redeem_code,
+            commands::sync_list_conflicts,
+            commands::sync_resolve_conflict,
+            commands::sync_reconcile,
+            commands::sync_delete_cloud_library,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
-

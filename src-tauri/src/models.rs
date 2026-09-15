@@ -277,3 +277,49 @@ pub struct ImportPayload {
     #[serde(default)]
     pub overwrite: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncLoginPayload {
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncStatusDto {
+    pub logged_in: bool,
+    pub email: Option<String>,
+    pub account_id: Option<String>,
+    pub sync_enabled: bool,
+    /// None = 未知（离线或未查询）
+    pub member_active: Option<bool>,
+    pub expires_at: Option<String>,
+    pub in_retention: Option<bool>,
+    pub pending_ops: i64,
+    pub conflict_count: i64,
+    pub epoch: i64,
+    pub cursor: i64,
+    pub reconcile_required: bool,
+    pub last_sync_at: Option<String>,
+    pub last_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncConflictDto {
+    pub entity_type: String,
+    pub entity_key: String,
+    pub local_payload: Option<serde_json::Value>,
+    pub remote_payload: Option<serde_json::Value>,
+    pub remote_server_version: Option<i64>,
+    pub detected_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncResolvePayload {
+    pub entity_type: String,
+    pub entity_key: String,
+    pub keep: String,
+}

@@ -57,7 +57,8 @@ pub async fn download_cover(
     if bytes.len() > MAX_BYTES {
         return Err(AppError::validation("封面文件过大"));
     }
-    let ext = sniff_extension(&bytes).ok_or_else(|| AppError::validation("封面不是支持的图片格式"))?;
+    let ext =
+        sniff_extension(&bytes).ok_or_else(|| AppError::validation("封面不是支持的图片格式"))?;
     let dir = covers_dir(data_dir);
     tokio::fs::create_dir_all(&dir).await?;
     let filename = format!("{local_id}.{ext}");

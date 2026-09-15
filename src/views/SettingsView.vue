@@ -1,7 +1,21 @@
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { onMounted, shallowRef } from 'vue'
 import TierManager from '../components/TierManager.vue'
 import { themeMode, type ThemeMode } from '../services/theme'
+import {
+  syncDeleteCloudLibrary,
+  syncListConflicts,
+  syncLogin,
+  syncLogout,
+  syncNow,
+  syncReconcile,
+  syncRedeemCode,
+  syncResolveConflict,
+  syncSetEnabled,
+  syncStatus,
+  type SyncConflict,
+  type SyncStatus
+} from '../services/sync'
 import { useLibraryStore } from '../stores/library'
 import { useNotices } from '../stores/notices'
 import type { BackupDocument, ImportPreview } from '../types/anime'
@@ -119,6 +133,102 @@ async function onDeleteData() {
     busy.value = false
   }
 }
+
+// ---------- 云同步 ----------
+
+const sync = shallowRef<SyncStatus | null>(null)
+const syncBusy = shallowRef(false)
+const loginEmail = shallowRef('')
+const loginPassword = shallowRef('')
+const redeemCode = shallowRef('')
+const conflicts = shallowRef<SyncConflict[]>([])
+
+async function refreshSync() {
+  if (!store.desktop) return
+  try {
+    sync.value = await syncStatus()
+    conflicts.value = sync.value.conflictCount > 0 ? await syncListConflicts() : []
+  } catch {
+    sync.value = null
+  }
+}
+
+async function withSyncBusy(task: () => Promise<SyncStatus | void>, ok?: string) {
+  syncBusy.value = true
+  try {
+    const next = await task()
+    if (next) sync.value = next
+    await refreshSync()
+    if (ok) push(ok)
+  } catch (error) {
+    push(error instanceof Error ? error.message : '操作失败')
+  } finally {
+    syncBusy.value = false
+  }
+}
+
+function onLogin() {
+  if (!loginEmail.value || !loginPassword.value) {
+    push('请输入邮箱和密码')
+    return
+  }
+  void withSyncBusy(() => syncLogin(loginEmail.value, loginPassword.value), '已登录')
+}
+
+function onLogout() {
+  void withSyncBusy(() => syncLogout(), '已退出登录')
+}
+
+function onToggleSync() {
+  if (!sync.value) return
+  void withSyncBusy(() => syncSetEnabled(!sync.value!.syncEnabled))
+}
+
+function onSyncNow() {
+  void withSyncBusy(() => syncNow(), '同步完成')
+}
+
+function onRedeem() {
+  const code = redeemCode.value.trim()
+  if (!code) return
+  syncBusy.value = true
+  syncRedeemCode(code)
+    .then(async (result) => {
+      if (result.status === 'redeemed') push('兑换成功，会员已生效')
+      else if (result.status === 'replayed') push('该请求已处理过，未重复兑换')
+      else if (result.status === 'already_redeemed') push('该兑换码已被使用')
+      else push(`兑换失败：${result.status}`)
+      redeemCode.value = ''
+      await refreshSync()
+    })
+    .catch((error) => push(error instanceof Error ? error.message : '兑换失败'))
+    .finally(() => {
+      syncBusy.value = false
+    })
+}
+
+function onResolve(conflict: SyncConflict, keep: 'local' | 'remote') {
+  void withSyncBusy(
+    () => syncResolveConflict(conflict.entityType, conflict.entityKey, keep),
+    keep === 'local' ? '已保留本地版本' : '已采用云端版本'
+  )
+}
+
+function onReconcile(mode: 'rebuild' | 'overwrite') {
+  const tip =
+    mode === 'rebuild'
+      ? '将把本地全部数据重新上传到云端。继续？'
+      : '将清空本地收藏并以云端数据为准（会先自动备份一份数据库）。继续？'
+  if (!window.confirm(tip)) return
+  void withSyncBusy(() => syncReconcile(mode), '对账完成')
+}
+
+function onDeleteCloud() {
+  if (!window.confirm('将删除云端全部收藏数据（本地数据保留）。此操作不可撤销，确定？')) return
+  void withSyncBusy(() => syncDeleteCloudLibrary(), '云端数据已删除')
+}
+
+onMounted(refreshSync)
 </script>
 
 <template>
@@ -178,6 +288,94 @@ async function onDeleteData() {
         </button>
         <p v-if="!store.desktop" class="hint">浏览器演示模式只预览，不写入。</p>
       </div>
+    </section>
+
+    <section v-if="store.desktop" class="panel">
+      <h2 class="panel-title">云同步</h2>
+      <p class="panel-copy">可选功能：登录并开启后，收藏、评分与分档会在设备间同步。不登录时所有功能照常本地使用。</p>
+
+      <div v-if="!sync?.loggedIn" class="sync-login">
+        <input v-model="loginEmail" type="email" class="input" placeholder="邮箱" autocomplete="email" />
+        <input
+          v-model="loginPassword"
+          type="password"
+          class="input"
+          placeholder="密码"
+          autocomplete="current-password"
+          @keyup.enter="onLogin"
+        />
+        <button type="button" class="btn btn-primary" :disabled="syncBusy" @click="onLogin">登录</button>
+      </div>
+
+      <template v-else>
+        <div class="sync-status">
+          <p class="sync-line">已登录 {{ sync.email }}</p>
+          <p v-if="sync.memberActive === true" class="sync-line">
+            会员有效<span v-if="sync.expiresAt"> · 至 {{ sync.expiresAt.slice(0, 10) }}</span>
+          </p>
+          <p v-else-if="sync.memberActive === false" class="sync-line warn">
+            {{ sync.inRetention ? '会员已到期（云端数据保留期内可拉取，续期后恢复上传）' : '会员未激活' }}
+          </p>
+          <p class="sync-line">
+            待上传 {{ sync.pendingOps }} · 冲突 {{ sync.conflictCount }}
+            <span v-if="sync.lastSyncAt"> · 上次同步 {{ new Date(sync.lastSyncAt).toLocaleString() }}</span>
+          </p>
+          <p v-if="sync.lastError" class="sync-line warn">{{ sync.lastError }}</p>
+        </div>
+
+        <div v-if="sync.reconcileRequired" class="reconcile">
+          <p class="sync-line warn">本地与云端状态不一致，需要选择处理方式：</p>
+          <div class="actions">
+            <button type="button" class="btn btn-ghost" :disabled="syncBusy" @click="onReconcile('rebuild')">
+              以本地为准重建云端
+            </button>
+            <button type="button" class="btn btn-ghost" :disabled="syncBusy" @click="onReconcile('overwrite')">
+              以云端为准覆盖本地（先备份）
+            </button>
+          </div>
+        </div>
+
+        <div v-if="conflicts.length" class="conflicts">
+          <p class="sync-line warn">以下条目本地与云端都有修改，请选择保留哪一边：</p>
+          <div v-for="c in conflicts" :key="`${c.entityType}:${c.entityKey}`" class="conflict-row">
+            <span class="conflict-name">{{ c.entityType === 'record' ? `番剧 #${c.entityKey}` : c.entityKey }}</span>
+            <button type="button" class="btn btn-ghost" :disabled="syncBusy" @click="onResolve(c, 'local')">
+              保留本地
+            </button>
+            <button type="button" class="btn btn-ghost" :disabled="syncBusy" @click="onResolve(c, 'remote')">
+              采用云端
+            </button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" :disabled="syncBusy || sync.reconcileRequired" @click="onToggleSync">
+            {{ sync.syncEnabled ? '关闭同步' : '开启同步' }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-ghost"
+            :disabled="syncBusy || !sync.syncEnabled || sync.reconcileRequired"
+            @click="onSyncNow"
+          >
+            立即同步
+          </button>
+          <button type="button" class="btn btn-ghost" :disabled="syncBusy" @click="onLogout">退出登录</button>
+        </div>
+
+        <div class="redeem">
+          <input v-model="redeemCode" class="input" placeholder="会员兑换码" @keyup.enter="onRedeem" />
+          <button type="button" class="btn btn-ghost" :disabled="syncBusy || !redeemCode.trim()" @click="onRedeem">
+            兑换
+          </button>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-ghost danger-link" :disabled="syncBusy" @click="onDeleteCloud">
+            删除云端数据
+          </button>
+        </div>
+      </template>
     </section>
 
     <section class="panel">
@@ -299,6 +497,69 @@ async function onDeleteData() {
   gap: 8px;
   align-items: center;
   font-size: 14px;
+}
+
+.sync-login,
+.redeem {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.input {
+  flex: 1;
+  min-width: 160px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface-soft);
+  border: 1px solid var(--fill);
+  border-radius: var(--radius-md);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--text-soft);
+}
+
+.sync-status {
+  margin-bottom: 14px;
+}
+
+.sync-line {
+  margin: 2px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sync-line.warn {
+  color: var(--danger);
+}
+
+.reconcile,
+.conflicts {
+  margin-bottom: 14px;
+  padding: 14px;
+  background: var(--surface-soft);
+  border-radius: var(--radius-md);
+}
+
+.conflict-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.conflict-name {
+  flex: 1;
+  font-size: 13px;
+}
+
+.danger-link {
+  color: var(--danger);
 }
 
 .danger {
