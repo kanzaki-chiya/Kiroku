@@ -311,33 +311,67 @@ fn local_entity_payload(
     }
 }
 
+/// 取本批待推 op（seq 序）：跳过未到重试点的 op；同实体有更早 seq 的未到期
+/// op 时一并跳过——否则乱序推送会让旧 op 晚到产生假冲突（SYNC_DESIGN §5 按 seq 串行）。
+/// 返回 (推送载荷, [(op_id, 已失败次数)])。
+fn select_due_ops(
+    conn: &Connection,
+) -> Result<(Vec<Value>, Vec<(String, i64)>), AppError> {
+    let mut stmt = conn.prepare(
+        "SELECT o.op_id, o.entity_type, o.entity_key, o.op_type, o.payload_json,
+                o.base_server_version, o.attempts
+         FROM sync_outbox o
+         WHERE (o.next_retry_at IS NULL OR o.next_retry_at <= ?1)
+           AND NOT EXISTS (
+             SELECT 1 FROM sync_outbox e
+             WHERE e.entity_type = o.entity_type AND e.entity_key = o.entity_key
+               AND e.seq < o.seq
+               AND e.next_retry_at IS NOT NULL AND e.next_retry_at > ?1
+           )
+         ORDER BY o.seq LIMIT ?2",
+    )?;
+    let rows = stmt
+        .query_map(params![crate::validate::now_iso(), PUSH_BATCH], |row| {
+            Ok((
+                json!({
+                    "op_id": row.get::<_, String>(0)?,
+                    "entity_type": row.get::<_, String>(1)?,
+                    "entity_key": row.get::<_, String>(2)?,
+                    "op_type": row.get::<_, String>(3)?,
+                    "payload": serde_json::from_str::<Value>(&row.get::<_, String>(4)?).unwrap_or(Value::Null),
+                    "base_server_version": row.get::<_, i64>(5)?,
+                }),
+                row.get::<_, String>(0)?,
+                row.get::<_, i64>(6)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok((
+        rows.iter().map(|(op, _, _)| op.clone()).collect(),
+        rows.into_iter()
+            .map(|(_, op_id, attempts)| (op_id, attempts))
+            .collect(),
+    ))
+}
+
 async fn push_all(live: &LiveState, generation: i64) -> Result<(), AppError> {
     loop {
-        let ops = {
+        let (ops, attempts) = {
             let conn = guard(live)?;
-            let mut stmt = conn.prepare(
-                "SELECT op_id, entity_type, entity_key, op_type, payload_json, base_server_version
-                 FROM sync_outbox ORDER BY seq LIMIT ?1",
-            )?;
-            let rows = stmt
-                .query_map(params![PUSH_BATCH], |row| {
-                    Ok(json!({
-                        "op_id": row.get::<_, String>(0)?,
-                        "entity_type": row.get::<_, String>(1)?,
-                        "entity_key": row.get::<_, String>(2)?,
-                        "op_type": row.get::<_, String>(3)?,
-                        "payload": serde_json::from_str::<Value>(&row.get::<_, String>(4)?).unwrap_or(Value::Null),
-                        "base_server_version": row.get::<_, i64>(5)?,
-                    }))
-                })?
-                .collect::<Result<Vec<_>, _>>()?;
-            rows
+            select_due_ops(&conn)?
         };
         if ops.is_empty() {
             return Ok(());
         }
         let sent = ops.len();
-        let resp = rpc(live, "kiroku_sync_push", json!({ "p_ops": ops })).await?;
+        let resp = match rpc(live, "kiroku_sync_push", json!({ "p_ops": ops })).await {
+            Ok(resp) => resp,
+            Err(err) => {
+                let conn = guard(live)?;
+                mark_batch_failed(&conn, &attempts, &err.message)?;
+                return Err(err);
+            }
+        };
         if resp.get("status").and_then(|v| v.as_str()) == Some("entitlement_expired") {
             let conn = guard(live)?;
             set_last_error(&conn, Some("会员已到期，本地修改保留待续期后上传"))?;
@@ -418,6 +452,28 @@ async fn push_all(live: &LiveState, generation: i64) -> Result<(), AppError> {
             return Ok(());
         }
     }
+}
+
+/// 批量推送失败：逐 op 记 attempts+1、last_error 与下次可重试时间。
+/// 退避 = min(30s × 2^attempts, 300s)（SYNC_DESIGN §9 指数退避上限 5 分钟）。
+fn mark_batch_failed(
+    conn: &Connection,
+    attempts: &[(String, i64)],
+    error: &str,
+) -> Result<(), AppError> {
+    for (op_id, prev_attempts) in attempts {
+        let shift = u32::try_from(*prev_attempts).unwrap_or(0).min(4);
+        let delay = (30_i64 << shift).min(300);
+        let next = (chrono::Utc::now() + chrono::Duration::seconds(delay))
+            .to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+        conn.execute(
+            "UPDATE sync_outbox
+             SET attempts = attempts + 1, last_error = ?2, next_retry_at = ?3
+             WHERE op_id = ?1",
+            params![op_id, error, next],
+        )?;
+    }
+    Ok(())
 }
 
 /// op 确认：删 outbox 行 + 对齐实体 server_version。
@@ -981,6 +1037,14 @@ pub fn status(live: &LiveState) -> Result<SyncStatusDto, AppError> {
     let conn = guard(live)?;
     let state = read_state(&conn)?;
     let pending: i64 = conn.query_row("SELECT COUNT(*) FROM sync_outbox", [], |row| row.get(0))?;
+    let next_retry_at: Option<String> = conn
+        .query_row(
+            "SELECT MIN(next_retry_at) FROM sync_outbox WHERE next_retry_at IS NOT NULL",
+            [],
+            |row| row.get(0),
+        )
+        .optional()?
+        .flatten();
     let conflicts: i64 =
         conn.query_row("SELECT COUNT(*) FROM sync_conflicts", [], |row| row.get(0))?;
     let session = current_session(live);
@@ -993,6 +1057,7 @@ pub fn status(live: &LiveState) -> Result<SyncStatusDto, AppError> {
         expires_at: None,
         in_retention: None,
         pending_ops: pending,
+        next_retry_at,
         conflict_count: conflicts,
         epoch: state.epoch,
         cursor: state.cursor,
@@ -1073,6 +1138,217 @@ mod tests {
             },
             review: "e2e".into(),
         }
+    }
+
+    fn iso_after(seconds: i64) -> String {
+        (chrono::Utc::now() + chrono::Duration::seconds(seconds))
+            .to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+    }
+
+    #[test]
+    fn due_ops_skip_not_ready_and_block_same_entity() {
+        let conn = db::open_memory().unwrap();
+        conn.execute(
+            "UPDATE sync_state SET sync_enabled = 1, account_id = 'u1' WHERE id = 1",
+            [],
+        )
+        .unwrap();
+        db::enqueue_sync_op_force(&conn, "record", "1", "upsert", &json!({"n": 1}), 0).unwrap();
+        db::enqueue_sync_op_force(&conn, "record", "1", "upsert", &json!({"n": 2}), 0).unwrap();
+        db::enqueue_sync_op_force(&conn, "record", "2", "upsert", &json!({"n": 3}), 0).unwrap();
+
+        let (ops, _) = select_due_ops(&conn).unwrap();
+        assert_eq!(ops.len(), 3, "无退避时全部到期");
+
+        // record/1 的首条 op 推到未来：同实体第二条连带跳过，record/2 不受影响
+        let first: String = conn
+            .query_row(
+                "SELECT op_id FROM sync_outbox ORDER BY seq LIMIT 1",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        conn.execute(
+            "UPDATE sync_outbox SET next_retry_at = ?1 WHERE op_id = ?2",
+            params![iso_after(600), first],
+        )
+        .unwrap();
+        let (ops, _) = select_due_ops(&conn).unwrap();
+        assert_eq!(ops.len(), 1);
+        assert_eq!(ops[0]["entity_key"], "2");
+
+        // 退避到点后又全部到期
+        conn.execute(
+            "UPDATE sync_outbox SET next_retry_at = ?1 WHERE op_id = ?2",
+            params![iso_after(-1), first],
+        )
+        .unwrap();
+        let (ops, _) = select_due_ops(&conn).unwrap();
+        assert_eq!(ops.len(), 3);
+    }
+
+    #[test]
+    fn failed_ops_get_exponential_backoff() {
+        let conn = db::open_memory().unwrap();
+        conn.execute(
+            "UPDATE sync_state SET sync_enabled = 1, account_id = 'u1' WHERE id = 1",
+            [],
+        )
+        .unwrap();
+        db::enqueue_sync_op_force(&conn, "record", "1", "upsert", &json!({"n": 1}), 0).unwrap();
+        let op_id: String = conn
+            .query_row("SELECT op_id FROM sync_outbox", [], |r| r.get(0))
+            .unwrap();
+
+        mark_batch_failed(&conn, &[(op_id.clone(), 0)], "boom").unwrap();
+        let (attempts, next): (i64, String) = conn
+            .query_row(
+                "SELECT attempts, next_retry_at FROM sync_outbox WHERE op_id = ?1",
+                params![op_id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(attempts, 1);
+        // 首次失败退避 ~30s（±2s 容差）
+        let eta = chrono::DateTime::parse_from_rfc3339(&next).unwrap().timestamp();
+        let delta = eta - chrono::Utc::now().timestamp();
+        assert!((28..=32).contains(&delta), "首次退避应约 30s，实得 {delta}s");
+
+        // 第 5 次失败封顶 5 分钟
+        mark_batch_failed(&conn, &[(op_id.clone(), 4)], "boom").unwrap();
+        let next: String = conn
+            .query_row(
+                "SELECT next_retry_at FROM sync_outbox WHERE op_id = ?1",
+                params![op_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        let eta = chrono::DateTime::parse_from_rfc3339(&next).unwrap().timestamp();
+        let delta = eta - chrono::Utc::now().timestamp();
+        assert!((298..=300).contains(&delta), "封顶应为 300s，实得 {delta}s");
+    }
+
+    fn live_state(dir: &std::path::Path) -> LiveState {
+        let conn = db::open(&dir.join("kiroku.db")).unwrap();
+        LiveState {
+            db: Mutex::new(conn),
+            data_dir: dir.to_path_buf(),
+            bangumi: BangumiClient::new().unwrap(),
+            http: reqwest::Client::new(),
+            session: Mutex::new(None),
+            sync_notify: Arc::new(tokio::sync::Notify::new()),
+        }
+    }
+
+    async fn login_and_bind(live: &LiveState, email: &str, password: &str) {
+        let session = auth::login(&live.http, &live.data_dir, email, password)
+            .await
+            .expect("login");
+        bind_account(live, &session.user_id).unwrap();
+        *live.session.lock().unwrap() = Some(session);
+    }
+
+    fn pending_ops(live: &LiveState) -> i64 {
+        let conn = live.db.lock().unwrap();
+        conn.query_row("SELECT COUNT(*) FROM sync_outbox", [], |r| r.get(0))
+            .unwrap()
+    }
+
+    fn entry_score(live: &LiveState, bangumi_id: i64) -> Option<f64> {
+        let conn = live.db.lock().unwrap();
+        db::get_library_entry_by_bangumi_id(&conn, bangumi_id)
+            .unwrap()
+            .and_then(|e| e.personal.score)
+    }
+
+    /// 真实双端：两个独立数据目录登同一账号，模拟两台设备。
+    /// A 推 B 拉 → B 改并推 → A 离线改同一条 → 冲突 → 解决 → 双端收敛。
+    /// 需要 KIROKU_E2E_EMAIL / KIROKU_E2E_PASSWORD；KIROKU_E2E_CODE 可选
+    /// （账号已是有效会员可省略）。开头会清云端库，勿对真实账号运行。
+    /// 手动运行：KIROKU_E2E_*=... cargo test e2e_two_devices -- --ignored
+    #[tokio::test]
+    #[ignore = "依赖真实 dev 项目与测试凭据"]
+    async fn e2e_two_devices() {
+        let Ok(email) = std::env::var("KIROKU_E2E_EMAIL") else {
+            return;
+        };
+        let password = std::env::var("KIROKU_E2E_PASSWORD").expect("KIROKU_E2E_PASSWORD");
+
+        let dir_a = tempfile::tempdir().unwrap();
+        let dir_b = tempfile::tempdir().unwrap();
+        let a = live_state(dir_a.path());
+        let b = live_state(dir_b.path());
+
+        // A：离线写入 → 登录 →（可选兑换）→ 清云端重建基线
+        {
+            let mut conn = a.db.lock().unwrap();
+            db::add_library_entry(&mut conn, &subject(991123), &draft(8.0)).unwrap();
+        }
+        login_and_bind(&a, &email, &password).await;
+        if let Ok(code) = std::env::var("KIROKU_E2E_CODE") {
+            redeem(&a, &code).await.expect("redeem");
+        }
+        delete_cloud(&a, "DELETE").await.expect("clean slate");
+        reconcile(&a, "rebuild").await.expect("rebuild");
+        run_once(&a).await.expect("a push baseline");
+        assert_eq!(pending_ops(&a), 0);
+
+        // B：同账号首次开启 → 拉到 A 的记录
+        login_and_bind(&b, &email, &password).await;
+        let conflicts = initial_enable(&b).await.expect("b initial_enable");
+        assert_eq!(conflicts, 0, "B 首启不应有冲突");
+        assert_eq!(entry_score(&b, 991123), Some(8.0));
+
+        // B：改同一条 + 新增另一条 → 推送
+        {
+            let mut conn = b.db.lock().unwrap();
+            let version = db::get_library_entry_by_bangumi_id(&conn, 991123)
+                .unwrap()
+                .unwrap()
+                .personal
+                .version;
+            db::update_personal_record(&mut conn, 991123, &draft(9.0), version).unwrap();
+            db::add_library_entry(&mut conn, &subject(991124), &draft(6.0)).unwrap();
+        }
+        run_once(&b).await.expect("b push");
+        assert_eq!(pending_ops(&b), 0);
+
+        // A：离线改同一条 → 一轮同步 → 拉取先记下新条目、同条进冲突
+        {
+            let mut conn = a.db.lock().unwrap();
+            let version = db::get_library_entry_by_bangumi_id(&conn, 991123)
+                .unwrap()
+                .unwrap()
+                .personal
+                .version;
+            db::update_personal_record(&mut conn, 991123, &draft(7.0), version).unwrap();
+        }
+        run_once(&a).await.expect("a sync into conflict");
+        assert_eq!(entry_score(&a, 991124), Some(6.0), "B 的新条目应拉到");
+        {
+            let conn = a.db.lock().unwrap();
+            let n: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM sync_conflicts
+                     WHERE entity_type = 'record' AND entity_key = '991123'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(n, 1, "同条双端修改应产生冲突");
+        }
+
+        // A：保留本地 → 推送成功；B：拉取收敛
+        resolve_conflict(&a, "record", "991123", "local").expect("resolve");
+        run_once(&a).await.expect("a push resolved");
+        assert_eq!(pending_ops(&a), 0);
+        assert_eq!(entry_score(&a, 991123), Some(7.0));
+
+        run_once(&b).await.expect("b pull resolved");
+        assert_eq!(entry_score(&b, 991123), Some(7.0), "B 应收敛到 A 的胜方");
+
+        // 清云端库（下一个 e2e 的干净起点）
+        delete_cloud(&a, "DELETE").await.expect("cleanup");
     }
 
     /// 真实 dev 项目端到端：登录 → 兑换 → 开启同步 → 推送 → 拉取 → 清库。

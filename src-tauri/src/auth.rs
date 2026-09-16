@@ -69,6 +69,23 @@ fn to_session(resp: TokenResponse, fallback_email: &str) -> Session {
     }
 }
 
+fn auth_error(code: &str, msg: &str) -> AppError {
+    AppError::new(
+        "AUTH",
+        match code {
+            "invalid_credentials" => "邮箱或密码不正确".to_string(),
+            "email_not_confirmed" => "邮箱未验证，请先完成验证".to_string(),
+            "user_already_exists" => "该邮箱已注册，请直接登录".to_string(),
+            "weak_password" => "密码强度不足，请使用更复杂的密码".to_string(),
+            "signup_disabled" => "当前未开放注册".to_string(),
+            "over_request_rate_limit" | "over_email_send_rate_limit" => {
+                "请求过于频繁，请稍后再试".to_string()
+            }
+            _ => msg.to_string(),
+        },
+    )
+}
+
 async fn parse_token_response(resp: reqwest::Response) -> Result<TokenResponse, AppError> {
     let status = resp.status();
     let body: serde_json::Value = resp.json().await.unwrap_or(serde_json::Value::Null);
@@ -82,14 +99,7 @@ async fn parse_token_response(resp: reqwest::Response) -> Result<TokenResponse, 
             .get("error_code")
             .and_then(|v| v.as_str())
             .unwrap_or("");
-        return Err(AppError::new(
-            "AUTH",
-            match code {
-                "invalid_credentials" => "邮箱或密码不正确".to_string(),
-                "email_not_confirmed" => "邮箱未验证，请先完成验证".to_string(),
-                _ => format!("{msg}"),
-            },
-        ));
+        return Err(auth_error(code, msg));
     }
     serde_json::from_value(body).map_err(AppError::from)
 }
@@ -110,6 +120,52 @@ pub async fn login(
     let session = to_session(parse_token_response(resp).await?, email);
     save_session(data_dir, &session)?;
     Ok(session)
+}
+
+#[derive(Debug)]
+pub enum SignupOutcome {
+    /// dev 项目开自动确认：注册即得会话。
+    Session(Session),
+    /// 需要邮箱验证：会话未建立，提示用户查收验证邮件。
+    ConfirmEmail,
+}
+
+/// 邮箱+密码注册。Supabase Auth：开 Confirm email 时返回 user 对象（无 token），
+/// 关时直接返回会话 token——两种响应按 access_token 字段区分。
+pub async fn signup(
+    client: &reqwest::Client,
+    data_dir: &Path,
+    email: &str,
+    password: &str,
+) -> Result<SignupOutcome, AppError> {
+    let resp = client
+        .post(format!("{CLOUD_BASE}/auth/v1/signup"))
+        .header("apikey", PUBLISHABLE_KEY)
+        .json(&serde_json::json!({ "email": email, "password": password }))
+        .send()
+        .await
+        .map_err(|_| AppError::network("无法连接云服务"))?;
+    let status = resp.status();
+    let body: serde_json::Value = resp.json().await.unwrap_or(serde_json::Value::Null);
+    if !status.is_success() {
+        let msg = body
+            .get("msg")
+            .or_else(|| body.get("message"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("注册失败");
+        let code = body
+            .get("error_code")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        return Err(auth_error(code, msg));
+    }
+    if body.get("access_token").and_then(|v| v.as_str()).is_some() {
+        let token: TokenResponse = serde_json::from_value(body).map_err(AppError::from)?;
+        let session = to_session(token, email);
+        save_session(data_dir, &session)?;
+        return Ok(SignupOutcome::Session(session));
+    }
+    Ok(SignupOutcome::ConfirmEmail)
 }
 
 pub async fn refresh(

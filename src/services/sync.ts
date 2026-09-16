@@ -1,4 +1,5 @@
 import { invokeCmd } from './tauri'
+import { isTauri } from '../runtime'
 
 export interface SyncStatus {
   loggedIn: boolean
@@ -9,6 +10,7 @@ export interface SyncStatus {
   expiresAt: string | null
   inRetention: boolean | null
   pendingOps: number
+  nextRetryAt: string | null
   conflictCount: number
   epoch: number
   cursor: number
@@ -35,6 +37,14 @@ export function syncLogin(email: string, password: string) {
   return invokeCmd<SyncStatus>('sync_login', { payload: { email, password } })
 }
 
+export interface SignupResult {
+  status: 'signed_in' | 'confirm_email' | string
+}
+
+export function syncSignup(email: string, password: string) {
+  return invokeCmd<SignupResult>('sync_signup', { payload: { email, password } })
+}
+
 export function syncLogout() {
   return invokeCmd<SyncStatus>('sync_logout')
 }
@@ -49,6 +59,19 @@ export function syncSetEnabled(enabled: boolean) {
 
 export function syncNow() {
   return invokeCmd<SyncStatus>('sync_now')
+}
+
+/** 轻量唤起同步 worker（网络恢复等事件触发），不等待结果。 */
+export function syncKick() {
+  return invokeCmd<void>('sync_kick')
+}
+
+/** 网络恢复时唤起一轮同步（SYNC_DESIGN §9 事件触发点）。仅桌面端挂载。 */
+export function initSyncTriggers() {
+  if (!isTauri()) return
+  window.addEventListener('online', () => {
+    void syncKick().catch(() => {})
+  })
 }
 
 export function syncRedeemCode(code: string) {

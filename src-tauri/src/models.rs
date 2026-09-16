@@ -297,6 +297,8 @@ pub struct SyncStatusDto {
     pub expires_at: Option<String>,
     pub in_retention: Option<bool>,
     pub pending_ops: i64,
+    /// 最早一条退避中 op 的重试时间；None = 无退避中 op
+    pub next_retry_at: Option<String>,
     pub conflict_count: i64,
     pub epoch: i64,
     pub cursor: i64,

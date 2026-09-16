@@ -12,6 +12,7 @@ import {
   syncRedeemCode,
   syncResolveConflict,
   syncSetEnabled,
+  syncSignup,
   syncStatus,
   type SyncConflict,
   type SyncStatus
@@ -138,8 +139,10 @@ async function onDeleteData() {
 
 const sync = shallowRef<SyncStatus | null>(null)
 const syncBusy = shallowRef(false)
+const authTab = shallowRef<'login' | 'signup'>('login')
 const loginEmail = shallowRef('')
 const loginPassword = shallowRef('')
+const signupPassword2 = shallowRef('')
 const redeemCode = shallowRef('')
 const conflicts = shallowRef<SyncConflict[]>([])
 
@@ -173,6 +176,39 @@ function onLogin() {
     return
   }
   void withSyncBusy(() => syncLogin(loginEmail.value, loginPassword.value), '已登录')
+}
+
+function onSignup() {
+  if (!loginEmail.value || !loginPassword.value) {
+    push('请输入邮箱和密码')
+    return
+  }
+  if (loginPassword.value !== signupPassword2.value) {
+    push('两次输入的密码不一致')
+    return
+  }
+  syncBusy.value = true
+  syncSignup(loginEmail.value, loginPassword.value)
+    .then(async (result) => {
+      if (result.status === 'signed_in') {
+        push('注册成功，已自动登录')
+      } else {
+        push('验证邮件已发送，请完成邮箱验证后登录')
+        authTab.value = 'login'
+      }
+      loginPassword.value = ''
+      signupPassword2.value = ''
+      await refreshSync()
+    })
+    .catch((error) => push(error instanceof Error ? error.message : '注册失败'))
+    .finally(() => {
+      syncBusy.value = false
+    })
+}
+
+function onAuthSubmit() {
+  if (authTab.value === 'login') onLogin()
+  else onSignup()
 }
 
 function onLogout() {
@@ -294,18 +330,54 @@ onMounted(refreshSync)
       <h2 class="panel-title">云同步</h2>
       <p class="panel-copy">可选功能：登录并开启后，收藏、评分与分档会在设备间同步。不登录时所有功能照常本地使用。</p>
 
-      <div v-if="!sync?.loggedIn" class="sync-login">
-        <input v-model="loginEmail" type="email" class="input" placeholder="邮箱" autocomplete="email" />
-        <input
-          v-model="loginPassword"
-          type="password"
-          class="input"
-          placeholder="密码"
-          autocomplete="current-password"
-          @keyup.enter="onLogin"
-        />
-        <button type="button" class="btn btn-primary" :disabled="syncBusy" @click="onLogin">登录</button>
-      </div>
+      <template v-if="!sync?.loggedIn">
+        <div class="segmented auth-tabs" role="group" aria-label="账号操作">
+          <button
+            type="button"
+            class="seg-btn"
+            :class="{ 'is-active': authTab === 'login' }"
+            :aria-pressed="authTab === 'login'"
+            @click="authTab = 'login'"
+          >
+            登录
+          </button>
+          <button
+            type="button"
+            class="seg-btn"
+            :class="{ 'is-active': authTab === 'signup' }"
+            :aria-pressed="authTab === 'signup'"
+            @click="authTab = 'signup'"
+          >
+            注册
+          </button>
+        </div>
+        <div class="sync-login">
+          <input v-model="loginEmail" type="email" class="input" placeholder="邮箱" autocomplete="email" />
+          <input
+            v-model="loginPassword"
+            type="password"
+            class="input"
+            placeholder="密码（至少 6 位）"
+            :autocomplete="authTab === 'login' ? 'current-password' : 'new-password'"
+            @keyup.enter="onAuthSubmit"
+          />
+          <input
+            v-if="authTab === 'signup'"
+            v-model="signupPassword2"
+            type="password"
+            class="input"
+            placeholder="再次输入密码"
+            autocomplete="new-password"
+            @keyup.enter="onAuthSubmit"
+          />
+          <button type="button" class="btn btn-primary" :disabled="syncBusy" @click="onAuthSubmit">
+            {{ authTab === 'login' ? '登录' : '注册' }}
+          </button>
+        </div>
+        <p v-if="authTab === 'signup'" class="hint">
+          注册后如收到验证邮件，完成验证再登录；登录不代表已开启同步。
+        </p>
+      </template>
 
       <template v-else>
         <div class="sync-status">
@@ -318,6 +390,7 @@ onMounted(refreshSync)
           </p>
           <p class="sync-line">
             待上传 {{ sync.pendingOps }} · 冲突 {{ sync.conflictCount }}
+            <span v-if="sync.nextRetryAt"> · 下次重试 {{ new Date(sync.nextRetryAt).toLocaleTimeString() }}</span>
             <span v-if="sync.lastSyncAt"> · 上次同步 {{ new Date(sync.lastSyncAt).toLocaleString() }}</span>
           </p>
           <p v-if="sync.lastError" class="sync-line warn">{{ sync.lastError }}</p>
@@ -497,6 +570,10 @@ onMounted(refreshSync)
   gap: 8px;
   align-items: center;
   font-size: 14px;
+}
+
+.auth-tabs {
+  margin-bottom: 14px;
 }
 
 .sync-login,

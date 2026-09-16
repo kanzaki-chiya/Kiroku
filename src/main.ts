@@ -4,6 +4,7 @@ import App from './App.vue'
 import { router } from './router'
 import { initTheme } from './services/theme'
 import { checkForUpdates } from './services/updater'
+import { initSyncTriggers } from './services/sync'
 import { useLibraryStore } from './stores/library'
 import './styles/main.css'
 
@@ -23,6 +24,7 @@ async function start() {
   }
   app.mount('#app')
   void checkForUpdates()
+  initSyncTriggers()
 }
 
 void start()

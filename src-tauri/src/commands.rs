@@ -367,6 +367,38 @@ pub async fn sync_login(
 }
 
 #[tauri::command]
+pub async fn sync_signup(
+    state: State<'_, AppState>,
+    payload: SyncLoginPayload,
+) -> Result<serde_json::Value, AppError> {
+    let live = live(&state)?;
+    match auth::signup(
+        &live.http,
+        &live.data_dir,
+        &payload.email,
+        &payload.password,
+    )
+    .await?
+    {
+        auth::SignupOutcome::ConfirmEmail => {
+            Ok(serde_json::json!({ "status": "confirm_email" }))
+        }
+        auth::SignupOutcome::Session(session) => {
+            // 自动确认开启：注册即登录，与 sync_login 同路径绑定账号
+            if let Err(err) = sync::bind_account(live, &session.user_id) {
+                auth::logout(&live.http, &live.data_dir, Some(session)).await;
+                return Err(err);
+            }
+            if let Ok(mut slot) = live.session.lock() {
+                *slot = Some(session);
+            }
+            kick_sync(live);
+            Ok(serde_json::json!({ "status": "signed_in" }))
+        }
+    }
+}
+
+#[tauri::command]
 pub async fn sync_logout(state: State<'_, AppState>) -> Result<SyncStatusDto, AppError> {
     let live = live(&state)?;
     let session = live.session.lock().ok().and_then(|mut slot| slot.take());
@@ -406,6 +438,14 @@ pub async fn sync_set_enabled(
     }
     kick_sync(live);
     sync::status(live)
+}
+
+/// 轻量唤起同步 worker（窗口回前台/网络恢复用），不阻塞等结果。
+#[tauri::command]
+pub fn sync_kick(state: State<AppState>) -> Result<(), AppError> {
+    let live = live(&state)?;
+    kick_sync(live);
+    Ok(())
 }
 
 #[tauri::command]

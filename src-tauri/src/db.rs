@@ -130,6 +130,11 @@ CREATE TABLE sync_state (
 );
 "#;
 
+// v5：outbox 逐 op 退避（SYNC_DESIGN §9 指数退避，上限 5 分钟）。
+const MIGRATION_V5: &str = r#"
+ALTER TABLE sync_outbox ADD COLUMN next_retry_at TEXT;
+"#;
+
 pub fn open(path: &Path) -> Result<Connection, AppError> {
     let conn = Connection::open(path)
         .map_err(|err| AppError::startup(format!("无法打开数据库：{err}")))?;
@@ -205,6 +210,15 @@ fn migrate(conn: &Connection) -> Result<(), AppError> {
         )?;
         tx.execute(
             "INSERT INTO schema_migrations (version, applied_at) VALUES (4, ?1)",
+            params![now_iso()],
+        )?;
+        tx.commit()?;
+    }
+    if current < 5 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(MIGRATION_V5)?;
+        tx.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (5, ?1)",
             params![now_iso()],
         )?;
         tx.commit()?;
@@ -1722,7 +1736,7 @@ mod tests {
                 row.get(0)
             })
             .unwrap();
-        assert_eq!(version, 4);
+        assert_eq!(version, 5);
     }
 
     #[test]

@@ -27,6 +27,18 @@ pub fn run() {
             let state = commands::init_state(app.handle());
             app.manage(state);
             commands::spawn_sync_worker(app.handle());
+            // 窗口回前台触发一轮同步（SYNC_DESIGN §9 事件触发点之一）
+            if let Some(window) = app.get_webview_window("main") {
+                let handle = app.handle().clone();
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::Focused(true) = event {
+                        let state = handle.state::<commands::AppState>();
+                        if let Some(live) = state.ready.as_ref() {
+                            live.sync_notify.notify_one();
+                        }
+                    }
+                });
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -54,7 +66,9 @@ pub fn run() {
             commands::delete_personal_data,
             commands::snapshot_database,
             commands::sync_login,
+            commands::sync_signup,
             commands::sync_logout,
+            commands::sync_kick,
             commands::sync_status,
             commands::sync_set_enabled,
             commands::sync_now,
