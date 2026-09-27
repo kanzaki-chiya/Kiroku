@@ -7,6 +7,7 @@ import { themeMode, type ThemeMode } from '../services/theme'
 import { useLibraryStore } from '../stores/library'
 import { useLibraryViewStore } from '../stores/libraryView'
 import { tierBadgeStyle, tierDescription } from '../utils/format'
+import BrandMark from './BrandMark.vue'
 
 const desktop = isTauri()
 const store = useLibraryStore()
@@ -38,19 +39,11 @@ const unassignedCount = computed(
 <template>
   <aside class="sidebar">
     <div v-if="desktop" class="drag-pad" data-tauri-drag-region>
-      <svg class="pad-mark" viewBox="0 0 30 36" fill="none" aria-hidden="true">
-        <path d="M7 5h17v25H7z" stroke="currentColor" stroke-width="1.4" />
-        <path d="M3 9v25h17M11 5v25M15 11h5M15 15h5" stroke="currentColor" stroke-width="1.4" />
-        <path d="M19 3v6l2-1.4L23 9V3z" fill="currentColor" />
-      </svg>
+      <BrandMark class="pad-mark" />
       <span class="pad-name">Kiroku</span>
     </div>
     <RouterLink v-else to="/library" class="brand">
-      <svg class="brand-mark" viewBox="0 0 30 36" fill="none" aria-hidden="true">
-        <path d="M7 5h17v25H7z" stroke="currentColor" stroke-width="1.2" />
-        <path d="M3 9v25h17M11 5v25M15 11h5M15 15h5" stroke="currentColor" stroke-width="1.2" />
-        <path d="M19 3v6l2-1.4L23 9V3z" fill="currentColor" />
-      </svg>
+      <BrandMark class="brand-mark" />
       <span class="brand-text">
         <span class="brand-name">Kiroku</span>
       </span>
@@ -169,7 +162,7 @@ const unassignedCount = computed(
 }
 
 .pad-mark {
-  width: 13px;
+  width: 16px;
   height: 16px;
   color: var(--brand);
   flex-shrink: 0;
@@ -197,8 +190,8 @@ const unassignedCount = computed(
 }
 
 .brand-mark {
-  width: 26px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   color: var(--brand);
 }
