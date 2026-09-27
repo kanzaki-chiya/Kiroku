@@ -65,6 +65,7 @@ In an era where modern media trackers lock user data behind commercial walled ga
 - **Standard JSON Backups**: One-click export of personal records, subject snapshots, and tier definitions into portable JSON format with smart import preview and conflict resolution.
 - **Physical SQLite Snapshots**: Export raw, timestamped SQLite database files (`.db`) directly for cold storage and archival.
 - **Decoupled Cache Management**: Clear local cover caches anytime to free up disk space without affecting your ratings or notes; complete data reset is also supported.
+- **Optional Cloud Sync**: Sign up in Settings on desktop and, with an active membership, sync your library, ratings and tiers across devices. Without signing in, everything stays local as before.
 - **In-App Auto Updates**: Integrated `tauri-plugin-updater` checks GitHub Releases on launch, allowing one-click download and seamless upgrade.
 - **Branded Windows Installer**: Customized NSIS installer visuals for a polished setup experience.
 
